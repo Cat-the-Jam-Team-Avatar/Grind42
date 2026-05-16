@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { fetchYesterdayLogtimeDetails } from "@/lib/42api/logtime";
 import { getPlayerFortyTwoTimeZone } from "@/lib/auth/forty-two";
-import { calculateCoins, getMultiplier } from "@/lib/economy";
+import { calcEarnings, getMultiplier } from "@/lib/economy";
 import { getNextStreak } from "@/lib/streak";
 
 export async function POST() {
@@ -42,10 +42,10 @@ export async function POST() {
     );
   }
 
-  const logtimeHours = logtimeDetails.hours;
-  const nextStreak = getNextStreak(player.current_streak, logtimeHours);
-  const multiplier = getMultiplier(nextStreak);
-  const coinsEarned = calculateCoins(logtimeHours, multiplier);
+  const logMinutes = logtimeDetails.seconds / 60;
+  const multiplier = getMultiplier(player.current_streak);
+  const nextStreak = getNextStreak(player.current_streak, logtimeDetails.hours);
+  const coinsEarned = calcEarnings(logMinutes, multiplier, player.pc_level ?? 0);
 
   const { error: updateError } = await supabase
     .from("users")
