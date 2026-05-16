@@ -1,43 +1,51 @@
 "use client";
 
-// Pixel desk visual — items light up based on owned inventory.
-// Replace placeholder divs with actual pixel-art sprites in Phase 5.
+import PixelSprite from "@/components/ui/PixelSprite";
+
+function normalizeInventory(inventory) {
+  return (inventory ?? []).map((item) => (typeof item === "string" ? item : item?.item_id ?? item?.id));
+}
+
 export default function PixelDesk({ inventory }) {
-  const has = (id) => inventory.includes(id);
+  const ownedIds = normalizeInventory(inventory);
+  const has = (id) => ownedIds.includes(id);
 
   return (
-    <div className="relative w-64 h-48 border-4 border-gray-600 bg-[#111] flex items-end justify-center">
-      {/* Monitor */}
-      <div
-        className={`absolute top-4 left-1/2 -translate-x-1/2 w-20 h-14 border-4 ${
-          has("dual_monitor") ? "border-blue-400 bg-blue-900" : "border-gray-600 bg-gray-900"
-        } flex items-center justify-center`}
-      >
-        <span className="nes-text text-[6px] text-center">
-          {has("dual_monitor") ? "DUAL MON" : "MONITOR"}
-        </span>
+    <div className="relative overflow-hidden min-h-[360px] border-[4px] border-g42-line bg-[linear-gradient(180deg,var(--g42-sky)_0%,var(--g42-sky-2)_52%,var(--g42-bg-2)_52%,var(--g42-bg-2)_100%)] shadow-[0_5px_0_var(--g42-line)] before:content-[''] before:absolute before:right-[8%] before:top-[10%] before:w-[90px] before:h-[66px] before:border-[3px] before:border-g42-line before:bg-[linear-gradient(180deg,#ffe070,#f8a548)] before:shadow-[3px_3px_0_var(--g42-line)] after:content-[''] after:absolute after:left-0 after:right-0 after:bottom-0 after:h-[42%] after:[border-top:4px_solid_var(--g42-line)] after:bg-[repeating-linear-gradient(180deg,var(--g42-wood)_0_7px,var(--g42-wood-d)_7px_9px,var(--g42-wood)_9px_15px)] max-[560px]:min-h-[300px]" aria-label="Pixel art çalışma masası">
+      <div className="absolute grid place-items-center z-[1] text-g42-accent-2 left-[7%] top-[13%] w-[68px] h-[82px] border-[3px] border-g42-line bg-g42-paper shadow-[3px_3px_0_var(--g42-line)] font-[var(--font-silkscreen),monospace] -rotate-[3deg]">42</div>
+
+      {has("ergonomic_chair") && (
+        <div className="absolute z-[2] left-1/2 bottom-[1%] -translate-x-1/2">
+          <PixelSprite name="chair" scale={4} />
+        </div>
+      )}
+
+      <div className="absolute z-[2] left-1/2 bottom-[27%] -translate-x-1/2">
+        <PixelSprite name="monitor" scale={has("dual_monitor") ? 4 : 3.4} />
       </div>
 
-      {/* Keyboard */}
-      <div
-        className={`absolute bottom-12 left-1/2 -translate-x-1/2 w-24 h-6 border-2 ${
-          has("mech_keyboard") ? "border-green-400 bg-green-900" : "border-gray-600 bg-gray-800"
-        }`}
-      />
+      <div className="absolute z-[2] left-1/2 bottom-[13%] -translate-x-1/2">
+        <PixelSprite name="keyboard" scale={has("mech_keyboard") ? 3.5 : 3} />
+      </div>
 
-      {/* Chair */}
-      <div
-        className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-10 border-2 ${
-          has("ergonomic_chair") ? "border-yellow-400 bg-yellow-900" : "border-gray-600 bg-gray-700"
-        }`}
-      />
+      <div className="absolute z-[2] right-[18%] bottom-[16%]">
+        <PixelSprite name="mouse" scale={3.2} />
+      </div>
 
-      {/* Cosmetics */}
-      {has("pixel_cat") && (
-        <span className="absolute bottom-14 right-4 nes-text text-[8px]">=^.^=</span>
-      )}
+      <div className="absolute z-[2] left-[8%] bottom-[31%]">
+        <PixelSprite name="plant" scale={2.5} />
+      </div>
+
       {has("loba_cup") && (
-        <span className="absolute bottom-14 left-4 nes-text text-[8px]">[☕]</span>
+        <div className="absolute z-[2] right-[7%] bottom-[31%]">
+          <PixelSprite name="cup" scale={3.2} />
+        </div>
+      )}
+
+      {has("pixel_cat") && (
+        <div className="absolute z-[2] left-[18%] bottom-[17%]">
+          <PixelSprite name="cat" scale={2.3} />
+        </div>
       )}
     </div>
   );

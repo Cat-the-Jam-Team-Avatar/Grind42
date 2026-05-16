@@ -1,8 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import PixelSprite, { CoinIcon } from "@/components/ui/PixelSprite";
+
+const SPRITE_MAP = {
+  chair: "chair",
+  keyboard: "keyboard",
+  monitor: "monitor",
+  scroll: "scroll",
+  cat: "cat",
+  frieren: "book",
+  cup: "cup",
+};
 
 export default function MarketItem({ item, canAfford, owned }) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
 
@@ -15,21 +28,33 @@ export default function MarketItem({ item, canAfford, owned }) {
       body: JSON.stringify({ itemId: item.id }),
     });
     const data = await res.json();
-    setFeedback(res.ok ? `✓ Satın alındı!` : data.error);
+
+    setFeedback(res.ok ? "Satın alındı." : data.error);
     setLoading(false);
+
+    if (res.ok) {
+      router.refresh();
+    }
   }
 
   const disabled = loading || (!item.consumable && owned) || !canAfford;
+  const spriteName = SPRITE_MAP[item.sprite] ?? "coin";
 
   return (
-    <div className="nes-container is-dark flex flex-col gap-2">
-      <p className="nes-text text-xs">{item.name}</p>
-      <p className="nes-text is-disabled" style={{ fontSize: "0.55rem" }}>
-        {item.description}
-      </p>
-      <p className="nes-text is-warning text-xs">{item.price} LC</p>
+    <article className="nes-container flex min-w-0 flex-col min-h-full gap-[10px] !bg-g42-paper shadow-[0_5px_0_var(--g42-line)] ![font-family:var(--font-pixelify),system-ui,sans-serif]">
+      <div className="grid place-items-center min-h-[110px] border-[3px] border-g42-line bg-[radial-gradient(var(--g42-grid)_1px,transparent_1px),var(--g42-paper-2)] [background-size:9px_9px]">
+        <PixelSprite name={spriteName} scale={spriteName === "monitor" ? 3 : 4} />
+      </div>
+      <p className="m-0 font-[var(--font-silkscreen),monospace] tracking-[0] text-g42-ink text-[15px] leading-[1.15]">{item.name}</p>
+      <p className="flex-1 text-g42-ink-soft text-[17px] leading-[1.25] max-[560px]:text-[16px]">{item.description}</p>
+      <div className="flex items-center justify-between text-g42-coin-d gap-[10px] font-[var(--font-silkscreen),monospace]">
+        <span className="inline-flex items-center gap-2">
+          <CoinIcon size={16} />
+          {item.price.toLocaleString("tr-TR")} LC
+        </span>
+      </div>
       {!item.consumable && owned ? (
-        <span className="nes-text is-success text-xs">Sahipsin ✓</span>
+        <span className="inline-flex items-center m-0 font-[var(--font-silkscreen),monospace] tracking-[0] text-g42-ink gap-[6px] border-[3px] border-g42-line bg-g42-paper-2 px-2 py-[6px] text-[11px]">Sahipsin</span>
       ) : (
         <button
           type="button"
@@ -43,10 +68,10 @@ export default function MarketItem({ item, canAfford, owned }) {
         </button>
       )}
       {feedback && (
-        <p className="nes-text is-success" style={{ fontSize: "0.55rem" }}>
+        <p className={`nes-text text-xs ${feedback === "Satın alındı." ? "is-success" : "is-error"}`}>
           {feedback}
         </p>
       )}
-    </div>
+    </article>
   );
 }

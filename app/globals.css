@@ -1,25 +1,205 @@
 @import "tailwindcss";
 @import "nes.css/css/nes.min.css";
 
+/* ── Design Tokens ───────────────────────────────────────────────────────── */
 :root {
-  --bg-dark: #0a0a0a;
-  --bg-panel: #111111;
-  --color-logcoin: #f8d44b;
-  --color-success: #22c55e;
-  --color-danger: #ef4444;
+  --g42-bg: #f6e3c5;
+  --g42-bg-2: #f0d2a3;
+  --g42-paper: #fff8eb;
+  --g42-paper-2: #f9e7c8;
+  --g42-ink: #3a2415;
+  --g42-ink-soft: #6b4a30;
+  --g42-muted: #a07a55;
+  --g42-line: #3a2415;
+  --g42-grid: rgba(58, 36, 21, 0.13);
+  --g42-accent: #e85d2f;
+  --g42-accent-2: #d94a1a;
+  --g42-accent-soft: #fbb478;
+  --g42-coin: #ffc83a;
+  --g42-coin-d: #c98917;
+  --g42-coin-ink: #7a4f08;
+  --g42-good: #4e8a25;
+  --g42-danger: #c44a3a;
+  --g42-sky: #b8e0e8;
+  --g42-sky-2: #87c3d1;
+  --g42-wood: #c98a4b;
+  --g42-wood-d: #8d5524;
+  --g42-shadow: rgba(58, 36, 21, 0.22);
 }
 
-html,
-body {
-  background-color: var(--bg-dark);
-  color: #ededed;
-  min-height: 100%;
+html[data-theme="dark"] {
+  --g42-bg: #171915;
+  --g42-bg-2: #252016;
+  --g42-paper: #24251f;
+  --g42-paper-2: #302a20;
+  --g42-ink: #f8f0dc;
+  --g42-ink-soft: #d8c4a0;
+  --g42-muted: #9f8f72;
+  --g42-line: #f4d99b;
+  --g42-grid: rgba(248, 240, 220, 0.1);
+  --g42-accent: #ff8d45;
+  --g42-accent-2: #ffb25e;
+  --g42-accent-soft: #60402a;
+  --g42-coin: #ffd34e;
+  --g42-coin-d: #d99a20;
+  --g42-coin-ink: #4b3006;
+  --g42-good: #86d37f;
+  --g42-danger: #ff7c7c;
+  --g42-sky: #263546;
+  --g42-sky-2: #18212d;
+  --g42-wood: #68492f;
+  --g42-wood-d: #46301f;
+  --g42-shadow: rgba(0, 0, 0, 0.48);
 }
 
-/* Pixel font override for NES.css elements */
+/*
+ * ── Tailwind Theme Integration ──────────────────────────────────────────────
+ * @theme inline maps design tokens to Tailwind color utilities without creating
+ * extra CSS variables. Utilities like bg-g42-ink compile to background-color: var(--g42-ink),
+ * which resolves dynamically when html[data-theme="dark"] overrides the variable.
+ */
+@theme inline {
+  --color-g42-bg: var(--g42-bg);
+  --color-g42-bg-2: var(--g42-bg-2);
+  --color-g42-paper: var(--g42-paper);
+  --color-g42-paper-2: var(--g42-paper-2);
+  --color-g42-ink: var(--g42-ink);
+  --color-g42-ink-soft: var(--g42-ink-soft);
+  --color-g42-muted: var(--g42-muted);
+  --color-g42-line: var(--g42-line);
+  --color-g42-accent: var(--g42-accent);
+  --color-g42-accent-2: var(--g42-accent-2);
+  --color-g42-accent-soft: var(--g42-accent-soft);
+  --color-g42-coin: var(--g42-coin);
+  --color-g42-coin-d: var(--g42-coin-d);
+  --color-g42-coin-ink: var(--g42-coin-ink);
+  --color-g42-good: var(--g42-good);
+  --color-g42-danger: var(--g42-danger);
+  --color-g42-sky: var(--g42-sky);
+  --color-g42-sky-2: var(--g42-sky-2);
+  --color-g42-wood: var(--g42-wood);
+  --color-g42-wood-d: var(--g42-wood-d);
+}
+
+/* ── Base ────────────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    @apply box-border;
+  }
+
+  html,
+  body {
+    @apply min-h-full text-g42-ink;
+    background: var(--g42-bg);
+  }
+
+  body {
+    @apply antialiased;
+    margin: 0;
+    font-family: var(--font-pixelify), system-ui, sans-serif;
+    letter-spacing: 0;
+  }
+
+  a {
+    @apply text-inherit no-underline;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+}
+
+/* ── nes.css Theme Overrides ─────────────────────────────────────────────── */
 .nes-text,
 .nes-btn,
 .nes-dialog,
+.nes-container,
+.nes-table {
+  font-family: var(--font-pixel), monospace !important;
+}
+
 .nes-container {
-  font-family: "Press Start 2P", monospace !important;
+  color: var(--g42-ink);
+}
+
+.nes-container,
+.nes-table.is-bordered,
+.nes-table.is-bordered th,
+.nes-table.is-bordered td,
+.nes-btn {
+  border-color: var(--g42-line) !important;
+}
+
+.nes-btn {
+  background: var(--g42-paper) !important;
+  color: var(--g42-ink) !important;
+  box-shadow: inset -4px -4px var(--g42-paper-2) !important;
+}
+
+.nes-btn.is-primary,
+.nes-btn.is-success,
+.nes-btn.is-warning {
+  color: #fff !important;
+}
+
+.nes-btn.is-primary {
+  background: var(--g42-accent) !important;
+  box-shadow: inset -4px -4px var(--g42-accent-2) !important;
+}
+
+.nes-btn.is-warning {
+  background: var(--g42-coin) !important;
+  color: var(--g42-coin-ink) !important;
+  box-shadow: inset -4px -4px var(--g42-coin-d) !important;
+}
+
+.nes-btn.is-success {
+  background: var(--g42-good) !important;
+}
+
+.nes-btn.is-disabled,
+.nes-btn:disabled {
+  opacity: 0.55;
+}
+
+.nes-container.is-dark,
+.nes-table.is-dark {
+  background: var(--g42-paper) !important;
+  color: var(--g42-ink) !important;
+}
+
+.nes-container.with-title > .title {
+  background: var(--g42-paper) !important;
+  color: var(--g42-accent-2) !important;
+  font-family: var(--font-pixel), monospace !important;
+}
+
+.nes-text.is-primary {
+  color: var(--g42-accent-2) !important;
+}
+
+.nes-text.is-success {
+  color: var(--g42-good) !important;
+}
+
+.nes-text.is-warning {
+  color: var(--g42-coin-d) !important;
+}
+
+.nes-text.is-error {
+  color: var(--g42-danger) !important;
+}
+
+.nes-text.is-disabled {
+  color: var(--g42-muted) !important;
+}
+
+/* ── Leaderboard (cannot be inlined in JSX) ─────────────────────────────── */
+@layer base {
+  .g42-rank-table tbody tr:nth-child(odd) td {
+    background: var(--g42-paper-2) !important;
+  }
 }

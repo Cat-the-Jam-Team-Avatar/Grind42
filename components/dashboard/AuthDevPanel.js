@@ -62,9 +62,9 @@ function safeJson(value) {
 
 function DevRow({ label, value }) {
   return (
-    <div className="grid min-w-0 grid-cols-1 gap-1 border-b border-white/10 py-2 sm:grid-cols-[minmax(0,130px)_minmax(0,1fr)] lg:grid-cols-1 xl:grid-cols-[minmax(0,130px)_minmax(0,1fr)]">
-      <span className="min-w-0 break-words text-[8px] leading-5 text-white/45">{label}</span>
-      <code className="min-w-0 break-words text-[9px] leading-5 text-[#f8d44b]">
+    <div className="grid min-w-0 grid-cols-1 gap-1 border-b border-g42-grid py-2 sm:grid-cols-[minmax(0,130px)_minmax(0,1fr)] lg:grid-cols-1 xl:grid-cols-[minmax(0,130px)_minmax(0,1fr)]">
+      <span className="min-w-0 break-words text-[8px] leading-5 text-g42-muted">{label}</span>
+      <code className="min-w-0 break-words text-[9px] leading-5 text-g42-accent-2">
         {formatValue(value)}
       </code>
     </div>
@@ -77,10 +77,10 @@ function DevLinkRow({ label, href }) {
   }
 
   return (
-    <div className="grid min-w-0 grid-cols-1 gap-1 border-b border-white/10 py-2 sm:grid-cols-[minmax(0,130px)_minmax(0,1fr)] lg:grid-cols-1 xl:grid-cols-[minmax(0,130px)_minmax(0,1fr)]">
-      <span className="min-w-0 break-words text-[8px] leading-5 text-white/45">{label}</span>
+    <div className="grid min-w-0 grid-cols-1 gap-1 border-b border-g42-grid py-2 sm:grid-cols-[minmax(0,130px)_minmax(0,1fr)] lg:grid-cols-1 xl:grid-cols-[minmax(0,130px)_minmax(0,1fr)]">
+      <span className="min-w-0 break-words text-[8px] leading-5 text-g42-muted">{label}</span>
       <a
-        className="min-w-0 break-words text-[9px] leading-5 text-[#f8d44b] underline"
+        className="min-w-0 break-words text-[9px] leading-5 text-g42-accent-2 underline"
         href={href}
         rel="noreferrer"
         target="_blank"
@@ -93,9 +93,9 @@ function DevLinkRow({ label, href }) {
 
 function JsonBlock({ title, value }) {
   return (
-    <details className="border-b border-white/10 py-2">
-      <summary className="cursor-pointer text-[8px] leading-5 text-[#22c55e]">{title}</summary>
-      <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words text-[8px] leading-4 text-white/65">
+    <details className="border-b border-g42-grid py-2">
+      <summary className="cursor-pointer text-[8px] leading-5 text-g42-good">{title}</summary>
+      <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words text-[8px] leading-4 text-g42-ink-soft">
         {safeJson(value)}
       </pre>
     </details>
@@ -157,12 +157,12 @@ export default function AuthDevPanel({ user, player, yesterdayLogtime }) {
   ];
 
   return (
-    <div className="nes-container is-dark with-title min-w-0">
-      <p className="title nes-text text-xs">Dev: 42 Auth</p>
+    <div className="nes-container min-w-0 !bg-g42-paper shadow-[0_5px_0_var(--g42-line)] ![font-family:var(--font-pixelify),system-ui,sans-serif] with-title min-w-0">
+      <p className="title">Dev: 42 Auth</p>
 
       <div className="flex min-w-0 flex-col gap-5">
         <section>
-          <h2 className="mb-2 text-[9px] text-[#22c55e]">Kullanılabilir Alanlar</h2>
+          <h2 className="mb-2 text-[9px] text-g42-good">Kullanılabilir Alanlar</h2>
           <DevRow label="Supabase user id" value={user?.id} />
           <DevRow label="Auth provider" value={providerIdentity?.provider} />
           <DevRow label="Provider user id" value={providerIdentity?.id} />
@@ -209,14 +209,14 @@ export default function AuthDevPanel({ user, player, yesterdayLogtime }) {
         </section>
 
         {!fortyTwoProfile && (
-          <p className="text-[8px] leading-5 text-white/45">
+          <p className="text-[8px] leading-5 text-g42-muted">
             42 /v2/me ham profili henüz DB&apos;de yok. Sonraki girişte provider token gelirse
             saklanır; bunun için supabase/schema.sql içindeki yeni kolonlar uygulanmalı.
           </p>
         )}
 
         <section>
-          <h2 className="mb-2 text-[9px] text-[#22c55e]">Ham Veriler</h2>
+          <h2 className="mb-2 text-[9px] text-g42-good">Ham Veriler</h2>
           <JsonBlock title="42 /v2/me raw JSON" value={fortyTwoProfile} />
           <JsonBlock title="42 locations_stats raw JSON" value={yesterdayLogtime?.raw} />
           <JsonBlock title="Supabase identity_data" value={identityData} />
