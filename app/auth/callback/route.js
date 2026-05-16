@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import {
+  buildFortyTwoProfilePatch,
   fetchFortyTwoProfile,
   getFortyTwoLogin,
-  getFortyTwoProfileId,
 } from "@/lib/auth/forty-two";
 
 function redirectToLogin(request, reason) {
@@ -45,7 +45,6 @@ function isOptionalProfileColumnError(error) {
 
 async function upsertPlayerProfile(supabase, user, intraLogin, fortyTwoProfile) {
   const basePayload = { id: user.id, intra_login: intraLogin };
-  const fortyTwoId = getFortyTwoProfileId(fortyTwoProfile);
 
   if (!fortyTwoProfile) {
     return supabase
@@ -55,13 +54,8 @@ async function upsertPlayerProfile(supabase, user, intraLogin, fortyTwoProfile) 
 
   const payload = {
     ...basePayload,
-    forty_two_profile: fortyTwoProfile,
-    forty_two_profile_updated_at: new Date().toISOString(),
+    ...buildFortyTwoProfilePatch(fortyTwoProfile),
   };
-
-  if (fortyTwoId) {
-    payload.forty_two_id = fortyTwoId;
-  }
 
   const result = await supabase
     .from("users")

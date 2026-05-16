@@ -8,13 +8,13 @@ export default async function LeaderboardPage() {
 
   const { data: weekly } = await supabase
     .from("users")
-    .select("intra_login, weekly_coins, current_streak")
+    .select("intra_login, display_name, profile_image_url, weekly_coins, current_streak")
     .order("weekly_coins", { ascending: false })
     .limit(20);
 
   const { data: allTime } = await supabase
     .from("users")
-    .select("intra_login, total_coins, current_streak")
+    .select("intra_login, display_name, profile_image_url, total_coins, current_streak")
     .order("total_coins", { ascending: false })
     .limit(20);
 
