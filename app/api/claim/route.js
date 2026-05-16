@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
-import { fetchYesterdayLogtime } from "@/lib/42api/logtime";
+import { fetchYesterdayLogtimeDetails } from "@/lib/42api/logtime";
 import { calculateCoins, getMultiplier } from "@/lib/economy";
 import { getNextStreak } from "@/lib/streak";
 
@@ -20,7 +20,21 @@ export async function POST() {
     return NextResponse.json({ error: "Already claimed today" }, { status: 400 });
   }
 
-  const logtimeHours = await fetchYesterdayLogtime(player.intra_login);
+  let logtimeDetails;
+
+  try {
+    logtimeDetails = await fetchYesterdayLogtimeDetails(player.intra_login);
+  } catch (error) {
+    return NextResponse.json(
+      {
+        details: error instanceof Error ? error.message : undefined,
+        error: "42 logtime alınamadı",
+      },
+      { status: 502 }
+    );
+  }
+
+  const logtimeHours = logtimeDetails.hours;
   const nextStreak = getNextStreak(player.current_streak, logtimeHours);
   const multiplier = getMultiplier(nextStreak);
   const coinsEarned = calculateCoins(logtimeHours, multiplier);
@@ -36,5 +50,12 @@ export async function POST() {
     })
     .eq("id", user.id);
 
-  return NextResponse.json({ coinsEarned, multiplier, logtimeHours, newStreak: nextStreak });
+  return NextResponse.json({
+    coinsEarned,
+    logtimeDate: logtimeDetails.date,
+    logtimeHours,
+    logtimeRaw: logtimeDetails.rawValue,
+    multiplier,
+    newStreak: nextStreak,
+  });
 }

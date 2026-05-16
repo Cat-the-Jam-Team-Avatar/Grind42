@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 
 export default function DailyClaimModal({ result, onClose }) {
-  const { coinsEarned, multiplier, logtimeHours, newStreak } = result;
+  const { coinsEarned, error, logtimeDate, logtimeHours, multiplier, newStreak } = result;
 
   return (
     <motion.div
@@ -21,21 +21,25 @@ export default function DailyClaimModal({ result, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <p className="nes-text is-primary text-xs mb-4">Daily Claim!</p>
-        <div className="flex flex-col gap-2 text-xs leading-loose">
-          <p className="nes-text">
-            Dün kampüste{" "}
-            <span className="is-warning">{logtimeHours.toFixed(1)} saat</span> geçirdin...
-          </p>
-          <p className="nes-text">
-            <span className="is-warning">x{multiplier.toFixed(1)}</span> çarpan eklendi...
-          </p>
-          <p className="nes-text is-success">
-            +{coinsEarned} LogCoin kazandın!
-          </p>
-          <p className="nes-text">
-            Seri: <span className="is-primary">{newStreak} gün</span>
-          </p>
-        </div>
+        {error ? (
+          <p className="nes-text is-error text-xs leading-loose">{error}</p>
+        ) : (
+          <div className="flex flex-col gap-2 text-xs leading-loose">
+            <p className="nes-text">
+              {logtimeDate} kampüs süresi{" "}
+              <span className="is-warning">{logtimeHours.toFixed(1)} saat</span>.
+            </p>
+            <p className="nes-text">
+              <span className="is-warning">x{multiplier.toFixed(1)}</span> çarpan eklendi...
+            </p>
+            <p className="nes-text is-success">
+              +{coinsEarned} LogCoin kazandın!
+            </p>
+            <p className="nes-text">
+              Seri: <span className="is-primary">{newStreak} gün</span>
+            </p>
+          </div>
+        )}
         <button
           type="button"
           className="nes-btn is-primary mt-4 text-xs"

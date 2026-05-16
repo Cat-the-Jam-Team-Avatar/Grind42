@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# 42 Tycoon
 
-## Getting Started
-
-First, run the development server:
+## Local development
 
 ```bash
+npm install
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Required `.env.local` values:
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://PROJECT_REF.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=SUPABASE_ANON_KEY
+FT_API_CLIENT_ID=42_INTRA_CLIENT_ID
+FT_API_CLIENT_SECRET=42_INTRA_CLIENT_SECRET
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Local app URL:
 
-## Learn More
+```text
+http://localhost:3000
+```
 
-To learn more about Next.js, take a look at the following resources:
+Local app callback:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```text
+http://localhost:3000/auth/callback
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 42 Auth setup
 
-## Deploy on Vercel
+This app uses Supabase Auth with a custom OAuth2 provider for 42. GitHub auth is not used.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Supabase custom provider identifier:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```text
+custom:42-school
+```
+
+42 Intra application redirect URI:
+
+```text
+https://PROJECT_REF.supabase.co/auth/v1/callback
+```
+
+Supabase URL configuration:
+
+```text
+Site URL:
+http://localhost:3000
+
+Redirect URLs:
+http://localhost:3000/auth/callback
+```
+
+Supabase custom OAuth2 provider values:
+
+```text
+Identifier: custom:42-school
+Name: 42 School
+Authorization URL: https://api.intra.42.fr/oauth/authorize
+Token URL: https://api.intra.42.fr/oauth/token
+Userinfo URL: https://api.intra.42.fr/v2/me
+Scopes: public
+Attribute mapping:
+  sub: email
+Email optional: true
+Enabled: true
+Provider type: OAuth2
+```
+
+To create or update this provider from the repo, temporarily add the service role key to `.env.local`:
+
+```env
+SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY
+```
+
+Then run:
+
+```bash
+npm run auth:setup42
+```
+
+Remove `SUPABASE_SERVICE_ROLE_KEY` from `.env.local` after setup if you do not need to run the command again.
+
+Run `supabase/schema.sql` after enabling auth so the callback route can create the matching `users` row under RLS.

@@ -1,14 +1,22 @@
-"use client";
+const AUTH_ERROR_MESSAGES = {
+  database_policy_failed: "Veritabanı RLS policy ayarı eksik.",
+  database_schema_missing: "Supabase veritabanı şeması kurulmamış.",
+  missing_code: "Giriş kodu alınamadı.",
+  missing_42_login: "42 login bilgisi alınamadı.",
+  provider_profile_missing_id: "42 profil kimliği Supabase'e map edilemedi.",
+  profile_sync_failed: "Profil eşitleme tamamlanamadı.",
+  provider_start_failed: "42 giriş akışı başlatılamadı.",
+  session_exchange_failed: "Oturum doğrulaması tamamlanamadı.",
+};
 
-export default function LoginPage() {
-  async function handleLogin() {
-    const { createBrowserClient } = await import("@/lib/supabase/client");
-    const supabase = createBrowserClient();
-    await supabase.auth.signInWithOAuth({
-      provider: "github", // 42 OAuth provider will replace this
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-  }
+export default async function LoginPage({ searchParams }) {
+  const params = await searchParams;
+  const authError = Array.isArray(params?.auth_error)
+    ? params.auth_error[0]
+    : params?.auth_error;
+  const errorMessage = authError
+    ? AUTH_ERROR_MESSAGES[authError] ?? "42 giriş akışı tamamlanamadı."
+    : null;
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen gap-8 p-4">
@@ -20,9 +28,12 @@ export default function LoginPage() {
       <p className="nes-text text-xs text-center opacity-70">
         Kampüste ter dök. Sanal cluster&apos;ın parlasın.
       </p>
-      <button type="button" className="nes-btn is-primary" onClick={handleLogin}>
+      {errorMessage && (
+        <p className="nes-text is-error text-xs text-center">{errorMessage}</p>
+      )}
+      <a href="/auth/sign-in" className="nes-btn is-primary">
         42 ile Giriş Yap
-      </button>
+      </a>
     </main>
   );
 }

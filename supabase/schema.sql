@@ -2,6 +2,9 @@
 create table if not exists users (
   id              uuid primary key references auth.users(id) on delete cascade,
   intra_login     text unique not null,
+  forty_two_id    bigint unique,
+  forty_two_profile jsonb,
+  forty_two_profile_updated_at timestamptz,
   balance         integer not null default 0,
   weekly_coins    integer not null default 0,
   total_coins     integer not null default 0,
@@ -9,6 +12,15 @@ create table if not exists users (
   claimed_today   boolean not null default false,
   created_at      timestamptz not null default now()
 );
+
+alter table users
+  add column if not exists forty_two_id bigint,
+  add column if not exists forty_two_profile jsonb,
+  add column if not exists forty_two_profile_updated_at timestamptz;
+
+create unique index if not exists users_forty_two_id_key
+  on users(forty_two_id)
+  where forty_two_id is not null;
 
 -- ─── Inventory ───────────────────────────────────────────────────────────────
 create table if not exists inventory (
@@ -26,6 +38,9 @@ alter table inventory enable row level security;
 
 create policy "Users can read own row"
   on users for select using (auth.uid() = id);
+
+create policy "Users can insert own row"
+  on users for insert with check (auth.uid() = id);
 
 create policy "Users can update own row"
   on users for update using (auth.uid() = id);
