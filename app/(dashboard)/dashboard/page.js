@@ -7,21 +7,58 @@ import StreakDisplay from "@/components/dashboard/StreakDisplay";
 import DailyClaimButton from "@/components/dashboard/DailyClaimButton";
 import AuthDevPanel from "@/components/dashboard/AuthDevPanel";
 import { fetchYesterdayLogtimeDetails } from "@/lib/42api/logtime";
+import {
+  buildFortyTwoProfilePatch,
+  fetchFortyTwoPublicProfile,
+  getPlayerFortyTwoTimeZone,
+} from "@/lib/auth/forty-two";
+
+async function syncMissingFortyTwoProfile(supabase, player) {
+  if (!player?.intra_login || player.profile_image_url) return player;
+
+  try {
+    const profile = await fetchFortyTwoPublicProfile(player.intra_login);
+    const patch = buildFortyTwoProfilePatch(profile);
+
+    const { data, error } = await supabase
+      .from("users")
+      .update(patch)
+      .eq("id", player.id)
+      .select("*")
+      .single();
+
+    if (error) {
+      console.warn("42 profile backfill failed", error);
+      return player;
+    }
+
+    return data ?? { ...player, ...patch };
+  } catch (error) {
+    console.warn("42 profile backfill skipped", error);
+    return player;
+  }
+}
 
 export default async function DashboardPage() {
   const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const { data: player } = await supabase
+  let { data: player } = await supabase
     .from("users")
     .select("*")
     .eq("id", user.id)
     .single();
+
+  player = await syncMissingFortyTwoProfile(supabase, player);
+
   let yesterdayLogtime = null;
 
   if (player?.intra_login) {
     try {
-      yesterdayLogtime = await fetchYesterdayLogtimeDetails(player.intra_login);
+      yesterdayLogtime = await fetchYesterdayLogtimeDetails(
+        player.intra_login,
+        getPlayerFortyTwoTimeZone(player)
+      );
     } catch (error) {
       yesterdayLogtime = {
         error: error instanceof Error ? error.message : "42 logtime alınamadı.",
@@ -33,7 +70,7 @@ export default async function DashboardPage() {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
       {/* Sol Panel */}
       <div className="flex flex-col gap-4">
-        <StatsPanel player={player} />
+        <StatsPanel player={player} yesterdayLogtime={yesterdayLogtime} />
         <StreakDisplay streak={player?.current_streak ?? 0} />
       </div>
 

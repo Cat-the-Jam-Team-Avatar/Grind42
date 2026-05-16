@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import ProfileAvatar from "@/components/ProfileAvatar";
 
 export default function LeaderboardTable({ weekly, allTime }) {
   const [tab, setTab] = useState("weekly");
@@ -30,7 +31,7 @@ export default function LeaderboardTable({ weekly, allTime }) {
         <thead>
           <tr>
             <th className="nes-text">#</th>
-            <th className="nes-text">Login</th>
+            <th className="nes-text">Kullanıcı</th>
             <th className="nes-text">LogCoin</th>
             <th className="nes-text">Seri</th>
           </tr>
@@ -39,7 +40,18 @@ export default function LeaderboardTable({ weekly, allTime }) {
           {rows.map((row, i) => (
             <tr key={row.intra_login} className={i === 0 ? "bg-yellow-900/30" : ""}>
               <td className="nes-text">{i + 1}</td>
-              <td className="nes-text">{row.intra_login}</td>
+              <td className="nes-text">
+                <div className="flex min-w-0 items-center gap-2">
+                  <ProfileAvatar
+                    label={row.display_name ?? row.intra_login}
+                    size={28}
+                    src={row.profile_image_url}
+                  />
+                  <span className="min-w-0 truncate">
+                    {row.display_name ?? row.intra_login}
+                  </span>
+                </div>
+              </td>
               <td className="nes-text is-warning">{row[coinKey]}</td>
               <td className="nes-text">{row.current_streak}g</td>
             </tr>
