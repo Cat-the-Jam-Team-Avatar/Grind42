@@ -3,73 +3,91 @@
 import ProfileAvatar from "@/components/ProfileAvatar";
 
 function formatHours(hours) {
-  if (!Number.isFinite(hours)) return "-";
-
+  if (!Number.isFinite(hours)) return "–";
   const totalMinutes = Math.round(hours * 60);
-  const wholeHours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${h}s ${m.toString().padStart(2, "0")}dk`;
+}
 
-  return `${wholeHours}s ${minutes.toString().padStart(2, "0")}dk`;
+function StatPill({ label, value, accent = "text-g42-ink" }) {
+  return (
+    <div className="flex flex-col gap-[3px] min-w-0">
+      <span className="block font-[var(--font-silkscreen),monospace] text-[9px] text-g42-muted uppercase tracking-wide leading-none">
+        {label}
+      </span>
+      <span
+        className={`block font-[var(--font-silkscreen),monospace] text-[15px] font-bold leading-none ${accent}`}
+      >
+        {value}
+      </span>
+    </div>
+  );
 }
 
 export default function StatsPanel({ player, yesterdayLogtime }) {
   if (!player) return null;
 
   const displayName = player.display_name ?? player.intra_login;
-  const yesterdayDate = yesterdayLogtime?.date ?? player.last_logtime_date;
   const yesterdayHours = Number.isFinite(yesterdayLogtime?.hours)
     ? yesterdayLogtime.hours
     : Number(player.last_logtime_hours);
+  const cursusText =
+    player.cursus_level != null
+      ? `${player.cursus_name ?? "42"} Lv ${Number(player.cursus_level).toFixed(2)}`
+      : "–";
 
   return (
-    <div className="nes-container is-dark with-title">
-      <p className="title nes-text text-xs">İstatistikler</p>
-      <div className="flex flex-col gap-2 text-xs">
-        <div className="mb-2 flex items-center gap-3">
+    <div className="nes-container with-title !bg-g42-paper shadow-[0_5px_0_var(--g42-line)]">
+      <p className="title">Profil</p>
+      <div className="flex items-center gap-5 flex-wrap">
+        {/* Avatar + identity */}
+        <div className="flex items-center gap-3 shrink-0">
           <ProfileAvatar
             label={displayName}
-            size={48}
+            size={52}
             src={player.profile_image_url}
           />
-          <div className="min-w-0">
-            <p className="truncate text-[10px] text-[#f8d44b]">{displayName}</p>
-            <p className="truncate text-[8px] text-white/50">
-              {player.campus_name ?? player.campus_time_zone ?? "42"}
+          <div>
+            <p className="m-0 font-[var(--font-silkscreen),monospace] text-[16px] text-g42-ink leading-tight">
+              {displayName}
+            </p>
+            <p className="m-0 font-[var(--font-silkscreen),monospace] text-[9px] text-g42-muted mt-1">
+              {player.intra_login} · {player.campus_name ?? "42"}
             </p>
           </div>
         </div>
-        <p>
-          <span className="nes-text is-disabled">Login: </span>
-          <span className="nes-text">{player.intra_login}</span>
-        </p>
-        <p>
-          <span className="nes-text is-disabled">Bakiye: </span>
-          <span className="nes-text is-warning">{player.balance} LC</span>
-        </p>
-        <p>
-          <span className="nes-text is-disabled">Haftalık: </span>
-          <span className="nes-text is-success">{player.weekly_coins} LC</span>
-        </p>
-        <p>
-          <span className="nes-text is-disabled">Toplam: </span>
-          <span className="nes-text">{player.total_coins} LC</span>
-        </p>
-        <p>
-          <span className="nes-text is-disabled">Cursus: </span>
-          <span className="nes-text">
-            {player.cursus_level !== null && player.cursus_level !== undefined
-              ? `${player.cursus_name ?? "42"} Lv ${Number(player.cursus_level).toFixed(2)}`
-              : "-"}
-          </span>
-        </p>
-        <p>
-          <span className="nes-text is-disabled">Dünkü: </span>
-          <span className="nes-text">
-            {yesterdayDate && Number.isFinite(yesterdayHours)
-              ? `${yesterdayDate} ${formatHours(yesterdayHours)}`
-              : "-"}
-          </span>
-        </p>
+
+        {/* Vertical divider (hidden on small screens) */}
+        <div
+          className="hidden min-[560px]:block w-[3px] self-stretch bg-g42-line shrink-0"
+          aria-hidden="true"
+        />
+
+        {/* Stat pills */}
+        <div className="flex gap-6 flex-wrap flex-1 min-w-0">
+          <StatPill
+            label="Bakiye"
+            value={`${player.balance ?? 0} LC`}
+            accent="text-g42-coin-d"
+          />
+          <StatPill
+            label="Haftalık"
+            value={`${player.weekly_coins ?? 0} LC`}
+            accent="text-g42-good"
+          />
+          <StatPill label="Toplam" value={`${player.total_coins ?? 0} LC`} />
+          <StatPill label="Cursus" value={cursusText} />
+          <StatPill
+            label="Dün"
+            value={
+              Number.isFinite(yesterdayHours)
+                ? formatHours(yesterdayHours)
+                : "–"
+            }
+            accent="text-g42-accent-2"
+          />
+        </div>
       </div>
     </div>
   );
