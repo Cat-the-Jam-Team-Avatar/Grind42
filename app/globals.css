@@ -1,25 +1,19 @@
 @import "tailwindcss";
 @import "nes.css/css/nes.min.css";
 
-:root {
-  --bg-dark: #0a0a0a;
-  --bg-panel: #111111;
+@theme {
+  --color-bg-dark: #0a0a0a;
+  --color-bg-panel: #111111;
   --color-logcoin: #f8d44b;
   --color-success: #22c55e;
   --color-danger: #ef4444;
 }
 
-html,
-body {
-  background-color: var(--bg-dark);
-  color: #ededed;
-  min-height: 100%;
-}
-
-/* Pixel font override for NES.css elements */
-.nes-text,
-.nes-btn,
-.nes-dialog,
-.nes-container {
-  font-family: "Press Start 2P", monospace !important;
+@layer base {
+  .nes-text,
+  .nes-btn,
+  .nes-dialog,
+  .nes-container {
+    @apply ![font-family:var(--font-pixel),monospace];
+  }
 }

@@ -24,9 +24,7 @@ export default function MarketItem({ item, canAfford, owned }) {
   return (
     <div className="nes-container is-dark flex flex-col gap-2">
       <p className="nes-text text-xs">{item.name}</p>
-      <p className="nes-text is-disabled" style={{ fontSize: "0.55rem" }}>
-        {item.description}
-      </p>
+      <p className="nes-text is-disabled text-[0.55rem]">{item.description}</p>
       <p className="nes-text is-warning text-xs">{item.price} LC</p>
       {!item.consumable && owned ? (
         <span className="nes-text is-success text-xs">Sahipsin ✓</span>
@@ -43,7 +41,7 @@ export default function MarketItem({ item, canAfford, owned }) {
         </button>
       )}
       {feedback && (
-        <p className="nes-text is-success" style={{ fontSize: "0.55rem" }}>
+        <p className="nes-text is-success text-[0.55rem]">
           {feedback}
         </p>
       )}

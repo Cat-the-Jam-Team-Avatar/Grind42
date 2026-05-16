@@ -11,9 +11,7 @@ export default function InventoryPanel({ ownedIds, allItems }) {
       <ul className="flex flex-wrap gap-3">
         {owned.map((item) => (
           <li key={item.id} className="nes-container is-rounded is-dark p-2">
-            <span className="nes-text" style={{ fontSize: "0.55rem" }}>
-              {item.name}
-            </span>
+            <span className="nes-text text-[0.55rem]">{item.name}</span>
           </li>
         ))}
       </ul>
