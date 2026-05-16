@@ -19,8 +19,19 @@ export default async function LeaderboardPage() {
     .limit(20);
 
   return (
-    <div className="p-4 flex flex-col gap-6">
-      <h2 className="nes-text is-primary text-sm">High Scores</h2>
+    <div className="flex flex-col gap-[18px]">
+      <section className="nes-container min-w-0 !bg-g42-paper shadow-[0_5px_0_var(--g42-line)] ![font-family:var(--font-pixelify),system-ui,sans-serif] with-title">
+        <p className="title">High Scores</p>
+        <div className="flex items-center justify-between gap-4 mb-[10px] [&_p]:m-0">
+          <div>
+            <p className="m-0 font-[var(--font-silkscreen),monospace] tracking-[0] text-g42-accent-2 text-[18px]">Kampüs Sıralaması</p>
+            <p className="text-[18px] leading-snug text-g42-ink-soft">
+              Haftanın grind listesi ve tüm zamanların LogCoin tablosu.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <LeaderboardTable weekly={weekly ?? []} allTime={allTime ?? []} />
     </div>
   );
