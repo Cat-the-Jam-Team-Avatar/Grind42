@@ -33,6 +33,8 @@ create table if not exists users (
   total_coins     integer not null default 0,
   current_streak  integer not null default 0,
   claimed_today   boolean not null default false,
+  last_claim_date date,
+  streak_started_at date,
   created_at      timestamptz not null default now()
 );
 
@@ -100,7 +102,6 @@ returns void language plpgsql as $$
 begin
   update users set
     weekly_coins   = 0,
-    current_streak = 0,
     claimed_today  = false;
 end;
 $$;

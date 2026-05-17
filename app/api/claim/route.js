@@ -3,7 +3,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { fetchYesterdayLogtimeDetails } from "@/lib/42api/logtime";
 import { getPlayerFortyTwoTimeZone } from "@/lib/auth/forty-two";
 import { calcEarnings, getMultiplier } from "@/lib/economy";
-import { getNextStreak } from "@/lib/streak";
+import { getNextStreak, isStreakFrozen } from "@/lib/streak";
 
 export async function POST() {
   const supabase = await createServerClient();
@@ -25,6 +25,15 @@ export async function POST() {
     return NextResponse.json({ error: "Already claimed today" }, { status: 400 });
   }
 
+  // Check if streak is frozen (Bocal İzni) — system is disabled for the user
+  const today = new Date().toISOString().slice(0, 10);
+  if (isStreakFrozen(player.streak_frozen_until, today)) {
+    return NextResponse.json(
+      { error: "Streak dondurulmuş — bugün claim yapılamaz" },
+      { status: 400 }
+    );
+  }
+
   let logtimeDetails;
 
   try {
@@ -43,9 +52,25 @@ export async function POST() {
   }
 
   const logMinutes = logtimeDetails.seconds / 60;
-  const multiplier = getMultiplier(player.current_streak);
-  const nextStreak = getNextStreak(player.current_streak, logtimeDetails.hours);
+  const nextStreak = getNextStreak(
+    player.current_streak,
+    logtimeDetails.hours,
+    player.last_claim_date,
+    today
+  );
+  const multiplier = getMultiplier(nextStreak);
   const coinsEarned = calcEarnings(logMinutes, multiplier, player.pc_level ?? 0);
+
+  // Determine streak_started_at:
+  // - If streak resets to 1 (new streak), set to today
+  // - If streak continues (>1), keep existing value
+  // - If streak is 0 (no logtime), clear it
+  let streakStartedAt = player.streak_started_at;
+  if (nextStreak === 0) {
+    streakStartedAt = null;
+  } else if (nextStreak === 1) {
+    streakStartedAt = today;
+  }
 
   const { error: updateError } = await supabase
     .from("users")
@@ -55,6 +80,8 @@ export async function POST() {
       total_coins: (player.total_coins ?? 0) + coinsEarned,
       current_streak: nextStreak,
       claimed_today: true,
+      last_claim_date: today,
+      streak_started_at: streakStartedAt,
     })
     .eq("id", user.id);
 
