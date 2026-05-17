@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { usePlayerStore } from "@/store/usePlayerStore";
 
 /**
@@ -9,11 +9,8 @@ import { usePlayerStore } from "@/store/usePlayerStore";
  * or page so all child client components share the same store state.
  */
 export default function PlayerStoreHydrator({ player }) {
-  const hasHydrated = useRef(false);
-
   useEffect(() => {
-    if (player && !hasHydrated.current) {
-      hasHydrated.current = true;
+    if (player) {
       usePlayerStore.getState().setPlayer(player);
     }
   }, [player]);
