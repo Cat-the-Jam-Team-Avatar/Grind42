@@ -1,11 +1,11 @@
 "use client";
 
-import { getMultiplier, streakDayLabel } from "@/lib/streak";
+import { getMultiplier, streakDayLabel, STREAK_CYCLE_LENGTH } from "@/lib/streak";
 import PixelSprite from "@/components/ui/PixelSprite";
 
 /* ── Constants ───────────────────────────────────────────────────────────── */
 
-const DAYS = ["PZT", "SAL", "ÇAR", "PER", "CUM", "CMT", "PAZ"];
+const STREAK_DAYS = Array.from({ length: STREAK_CYCLE_LENGTH }, (_, i) => `GÜN ${i + 1}`);
 const MULTIPLIERS = [1.0, 1.3, 1.4, 1.5, 1.6, 1.7, 2.0];
 
 /* ── Sub-components ──────────────────────────────────────────────────────── */
@@ -17,7 +17,7 @@ function StreakHeader({ streak, label, multiplier }) {
         <PixelSprite name="flame" scale={2.4} />
         <div>
           <p className="text-g42-muted font-[var(--font-silkscreen),monospace] text-[10px] uppercase tracking-wider">
-            Haftalık Seri
+            Kampüs Serisi
           </p>
           <p className="font-[var(--font-silkscreen),monospace] tracking-[0] text-g42-accent-2 text-[22px] leading-tight">
             {streak} gün
@@ -60,9 +60,10 @@ function StreakBar({ day, multiplier, active, current }) {
 export default function StreakDisplay({ streak }) {
   const multiplier = getMultiplier(streak);
   const label = streakDayLabel(streak);
-  const currentIndex = Math.min(streak, 6);
+  // streak 0 means no active streak, currentIndex maps to which bar is "current"
+  const currentIndex = streak > 0 ? Math.min(streak, STREAK_CYCLE_LENGTH) - 1 : -1;
 
-  const bars = DAYS.map((day, i) => ({
+  const bars = STREAK_DAYS.map((day, i) => ({
     day,
     multiplier: MULTIPLIERS[i],
     active: i < currentIndex,

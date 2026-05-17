@@ -19,6 +19,8 @@ const MOCK_PLAYER = {
   total_clicks: 0,
   claimed_today: false,
   streak_frozen_until: null,
+  last_claim_date: new Date(Date.now() - 86400000).toISOString().slice(0, 10), // yesterday
+  streak_started_at: new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10), // 3 days ago
   weekly_coins: 1800,
   total_coins: 12000,
   streak_milestone_reached: 1, // en yüksek ulaşılan milestone index (0=hiç)
@@ -48,6 +50,8 @@ export const usePlayerStore = create((set, get) => ({
   total_coins: 0,
   streak_milestone_reached: 0,
   first_purchase_done: false,
+  last_claim_date: null,
+  streak_started_at: null,
   // click window
   session_clicks: 0,
   click_locked_until: null,
@@ -84,6 +88,8 @@ export const usePlayerStore = create((set, get) => ({
       total_coins: data.total_coins ?? 0,
       streak_milestone_reached: data.streak_milestone_reached ?? 0,
       first_purchase_done: data.first_purchase_done ?? false,
+      last_claim_date: data.last_claim_date ?? null,
+      streak_started_at: data.streak_started_at ?? null,
     }),
 
   // XP ekle + level atlama hediyesini otomatik ver
@@ -102,6 +108,7 @@ export const usePlayerStore = create((set, get) => ({
     if (get().claimed_today) return { error: "Already claimed today" };
 
     if (USE_MOCK) {
+      const today = new Date().toISOString().slice(0, 10);
       set((s) => ({
         balance: s.balance + MOCK_CLAIM_RESULT.coinsEarned,
         weekly_coins: s.weekly_coins + MOCK_CLAIM_RESULT.coinsEarned,
@@ -109,6 +116,8 @@ export const usePlayerStore = create((set, get) => ({
         current_streak: MOCK_CLAIM_RESULT.newStreak,
         claimed_today: true,
         first_click_today: false,
+        last_claim_date: today,
+        streak_started_at: MOCK_CLAIM_RESULT.newStreak === 1 ? today : s.streak_started_at,
       }));
       get().addXp(MOCK_CLAIM_RESULT.xpEarned);
       return MOCK_CLAIM_RESULT;
