@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
-import { MARKET_ITEMS } from "@/lib/economy";
+import { MARKET_ITEMS } from "@/lib/market-items";
 
 export async function POST(request) {
   const { itemId } = await request.json();

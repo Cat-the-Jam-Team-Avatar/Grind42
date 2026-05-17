@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { createServerClient } from "@/lib/supabase/server";
 import MarketGrid from "@/components/market/MarketGrid";
 import InventoryPanel from "@/components/market/InventoryPanel";
-import { MARKET_ITEMS } from "@/lib/economy";
+import { MARKET_ITEMS } from "@/lib/market-items";
 
 export default async function MarketPage() {
   const supabase = await createServerClient();

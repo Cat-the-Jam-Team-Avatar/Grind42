@@ -6,6 +6,29 @@ import { AnimatePresence } from "framer-motion";
 import DailyClaimModal from "./DailyClaimModal";
 import { CoinIcon } from "@/components/ui/PixelSprite";
 
+/* ── Claim API ───────────────────────────────────────────────────────────── */
+
+async function performClaim() {
+  const res = await fetch("/api/claim", { method: "POST" });
+  const data = await res.json();
+
+  if (!res.ok) {
+    return { error: data.error ?? "Claim tamamlanamadı." };
+  }
+
+  return data;
+}
+
+/* ── Button label helper ─────────────────────────────────────────────────── */
+
+function getButtonLabel(loading, claimed) {
+  if (loading) return "Hesaplanıyor";
+  if (claimed) return "Bugün Alındı";
+  return "Günlük Claim";
+}
+
+/* ── Main Component ──────────────────────────────────────────────────────── */
+
 export default function DailyClaimButton({ claimed }) {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
@@ -16,10 +39,8 @@ export default function DailyClaimButton({ claimed }) {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/claim", { method: "POST" });
-      const data = await res.json();
-
-      setResult(res.ok ? data : { error: data.error ?? "Claim tamamlanamadı." });
+      const data = await performClaim();
+      setResult(data);
       setModalOpen(true);
     } catch {
       setResult({ error: "Claim isteği gönderilemedi." });
@@ -47,7 +68,7 @@ export default function DailyClaimButton({ claimed }) {
       >
         <span className="inline-flex items-center justify-center gap-2">
           {!claimed && <CoinIcon size={18} />}
-          {loading ? "Hesaplanıyor" : claimed ? "Bugün Alındı" : "Günlük Claim"}
+          {getButtonLabel(loading, claimed)}
         </span>
       </button>
 

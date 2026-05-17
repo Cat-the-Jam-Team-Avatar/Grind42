@@ -22,7 +22,10 @@ export default function InventoryPanel({ ownedIds, allItems }) {
       <p className="title">Envanter</p>
       <ul className="flex flex-wrap gap-[10px]">
         {owned.map((item) => (
-          <li key={item.id} className="inline-flex items-center m-0 font-[var(--font-silkscreen),monospace] tracking-[0] text-g42-ink gap-[6px] border-[3px] border-g42-line bg-g42-paper-2 px-2 py-[6px] text-[11px]">
+          <li
+            key={item.id}
+            className="inline-flex items-center m-0 font-[var(--font-silkscreen),monospace] tracking-[0] text-g42-ink gap-[6px] border-[3px] border-g42-line bg-g42-paper-2 px-2 py-[6px] text-[11px]"
+          >
             <PixelSprite name={SPRITE_MAP[item.sprite] ?? "coin"} scale={1.5} />
             <span>{item.name}</span>
           </li>

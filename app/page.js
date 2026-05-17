@@ -30,17 +30,14 @@ export default async function LoginPage({ searchParams }) {
 
   return (
     <main className="relative min-h-screen text-g42-ink bg-[radial-gradient(var(--g42-grid)_1px,transparent_1px),linear-gradient(180deg,var(--g42-bg),var(--g42-bg-2))] [background-size:12px_12px,auto] flex items-center justify-center p-4 sm:p-6">
-
       {/* Floating theme toggle */}
       <div className="absolute top-4 right-4 z-10">
         <ThemeToggle />
       </div>
 
       <div className="w-full max-w-[960px] grid grid-cols-1 min-[860px]:grid-cols-[1fr_320px] gap-5 items-center">
-
         {/* ── Left: Hero ── */}
         <div className="flex flex-col gap-4">
-
           {/* Title card */}
           <div className="nes-container !bg-g42-paper shadow-[0_5px_0_var(--g42-line)] relative overflow-hidden">
             {/* Pixel sun */}
@@ -58,14 +55,20 @@ export default async function LoginPage({ searchParams }) {
             </h1>
             <p className="m-0 mt-3 text-g42-ink-soft text-[16px] leading-snug max-w-[440px]">
               Kampüste geçirdiğin süre{" "}
-              <strong className="text-g42-coin-d">LogCoin</strong>&apos;e dönüşür.
-              Serini koru, masanı geliştir, tabloya çık.
+              <strong className="text-g42-coin-d">LogCoin</strong>&apos;e
+              dönüşür. Serini koru, masanı geliştir, tabloya çık.
             </p>
           </div>
 
           {/* Pixel desk scene */}
           <PixelDesk
-            inventory={["ergonomic_chair", "mech_keyboard", "dual_monitor", "pixel_cat", "loba_cup"]}
+            inventory={[
+              "ergonomic_chair",
+              "mech_keyboard",
+              "dual_monitor",
+              "pixel_cat",
+              "loba_cup",
+            ]}
           />
         </div>
 
@@ -85,8 +88,13 @@ export default async function LoginPage({ searchParams }) {
           {/* Features */}
           <ul className="m-0 p-0 list-none flex flex-col gap-2 border-t-[3px] border-g42-line pt-4">
             {FEATURES.map(({ icon, label }) => (
-              <li key={label} className="flex items-center gap-2 text-[13px] text-g42-ink-soft">
-                <span className="shrink-0 text-[15px]" aria-hidden="true">{icon}</span>
+              <li
+                key={label}
+                className="flex items-center gap-2 text-[13px] text-g42-ink-soft"
+              >
+                <span className="shrink-0 text-[15px]" aria-hidden="true">
+                  {icon}
+                </span>
                 <span>{label}</span>
               </li>
             ))}
@@ -95,7 +103,9 @@ export default async function LoginPage({ searchParams }) {
           {/* Error */}
           {errorMessage && (
             <div className="nes-container !bg-g42-paper !p-3 shadow-[0_3px_0_var(--g42-line)]">
-              <p className="m-0 nes-text is-error text-[11px] leading-relaxed">{errorMessage}</p>
+              <p className="m-0 nes-text is-error text-[11px] leading-relaxed">
+                {errorMessage}
+              </p>
             </div>
           )}
 
@@ -107,7 +117,6 @@ export default async function LoginPage({ searchParams }) {
             42 ile Giriş Yap
           </a>
         </section>
-
       </div>
     </main>
   );
