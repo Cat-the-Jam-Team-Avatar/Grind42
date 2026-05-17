@@ -1,10 +1,16 @@
 import AppNav from "./AppNav";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 import LiveBalanceBadge from "./LiveBalanceBadge";
+import ProfileAvatar from "@/components/ProfileAvatar";
 
 export default function AppShell({ children, player }) {
   const login = player?.intra_login ?? "cadet";
-  const initials = login.slice(0, 2).toUpperCase();
+  
+  // Extract full name from the saved 42 profile if available
+  const ftProfile = player?.forty_two_profile;
+  const extractedFullName = ftProfile?.usual_full_name || (ftProfile?.first_name ? `${ftProfile.first_name} ${ftProfile.last_name}` : null) || ftProfile?.displayname;
+  const displayName = extractedFullName || player?.display_name || login;
+  const avatarUrl = player?.profile_image_url;
   const serverBalance = player?.balance ?? 0;
 
   return (
@@ -14,17 +20,12 @@ export default function AppShell({ children, player }) {
         <div className="hidden min-[860px]:grid [grid-template-columns:auto_1fr_auto] items-center gap-4">
           {/* Zone 1: identity */}
           <div className="flex items-center gap-[10px] shrink-0">
-            <div
-              className="grid place-items-center w-9 h-9 border-[3px] border-g42-line bg-g42-accent-soft shadow-[2px_2px_0_var(--g42-line)] font-[var(--font-silkscreen),monospace] text-[13px] text-g42-ink font-bold"
-              aria-hidden="true"
-            >
-              {initials}
-            </div>
+            <ProfileAvatar label={displayName} size={36} src={avatarUrl} />
             <div>
-              <p className="m-0 font-[var(--font-silkscreen),monospace] text-[9px] text-g42-muted leading-none">
-                42 Tycoon
-              </p>
               <p className="m-0 font-[var(--font-silkscreen),monospace] text-[13px] text-g42-ink leading-tight">
+                {displayName}
+              </p>
+              <p className="m-0 font-[var(--font-silkscreen),monospace] text-[9px] text-g42-muted leading-none mt-[4px]">
                 {login}
               </p>
             </div>
@@ -46,15 +47,15 @@ export default function AppShell({ children, player }) {
         <div className="min-[860px]:hidden flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
-              <div
-                className="grid place-items-center shrink-0 w-8 h-8 border-[3px] border-g42-line bg-g42-accent-soft shadow-[2px_2px_0_var(--g42-line)] font-[var(--font-silkscreen),monospace] text-[11px] text-g42-ink font-bold"
-                aria-hidden="true"
-              >
-                {initials}
+              <ProfileAvatar label={displayName} size={32} src={avatarUrl} />
+              <div className="flex flex-col min-w-0">
+                <p className="m-0 font-[var(--font-silkscreen),monospace] text-[12px] text-g42-ink truncate leading-tight">
+                  {displayName}
+                </p>
+                <p className="m-0 font-[var(--font-silkscreen),monospace] text-[9px] text-g42-muted truncate leading-none mt-[2px]">
+                  {login}
+                </p>
               </div>
-              <p className="m-0 font-[var(--font-silkscreen),monospace] text-[12px] text-g42-ink truncate">
-                {login}
-              </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <LiveBalanceBadge serverBalance={serverBalance} size="sm" />
