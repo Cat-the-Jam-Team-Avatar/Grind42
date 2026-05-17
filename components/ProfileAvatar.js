@@ -43,6 +43,7 @@ export default function ProfileAvatar({ className = "", label, size = 48, src })
       className={`${baseClasses} object-cover`}
       height={size}
       src={src}
+      style={{ width: size, height: size }}
       width={size}
     />
   );

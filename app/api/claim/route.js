@@ -73,7 +73,7 @@ export async function POST() {
     .update({
       last_logtime_date: logtimeDetails.date,
       last_logtime_hours: logtimeDetails.hours,
-      last_logtime_seconds: logtimeDetails.seconds,
+      last_logtime_seconds: Math.round(logtimeDetails.seconds),
       last_logtime_synced_at: new Date().toISOString(),
     })
     .eq("id", user.id);
@@ -85,7 +85,7 @@ export async function POST() {
   return NextResponse.json({
     coinsEarned,
     logtimeDate: logtimeDetails.date,
-    logtimeHours,
+    logtimeHours: logtimeDetails.hours,
     logtimeRaw: logtimeDetails.rawValue,
     logtimeSeconds: logtimeDetails.seconds,
     multiplier,
