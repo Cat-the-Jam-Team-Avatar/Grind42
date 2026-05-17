@@ -7,7 +7,11 @@ import StreakDisplay from "@/components/dashboard/StreakDisplay";
 import DailyClaimButton from "@/components/dashboard/DailyClaimButton";
 import CampusClicker from "@/components/dashboard/CampusClicker";
 import PlayerStoreHydrator from "@/components/app/PlayerStoreHydrator";
-import { fetchYesterdayLogtimeDetails } from "@/lib/42api/logtime";
+import {
+  fetchYesterdayLogtimeDetails,
+  fetchLogtimeForDate,
+  getTodayDateString,
+} from "@/lib/42api/logtime";
 import {
   buildFortyTwoProfilePatch,
   fetchFortyTwoPublicProfile,
@@ -58,6 +62,19 @@ async function fetchPlayerLogtime(player) {
   }
 }
 
+async function fetchTodayLogtime(player) {
+  if (!player?.intra_login) return null;
+
+  try {
+    const timeZone = getPlayerFortyTwoTimeZone(player);
+    return await fetchLogtimeForDate(player.intra_login, getTodayDateString(timeZone), timeZone);
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "42 logtime alınamadı.",
+    };
+  }
+}
+
 /* ── Page Component ──────────────────────────────────────────────────────── */
 
 export default async function DashboardPage() {
@@ -76,6 +93,7 @@ export default async function DashboardPage() {
 
   const multiplier = getMultiplier(player?.current_streak ?? 0);
   const yesterdayLogtime = await fetchPlayerLogtime(player);
+  const todayLogtime = await fetchTodayLogtime(player);
 
   return (
     <div className="flex flex-col gap-5">
@@ -84,7 +102,7 @@ export default async function DashboardPage() {
 
       {/* ── Row 1: Profile + Daily Claim side by side ── */}
       <div className="grid grid-cols-1 min-[860px]:grid-cols-[1fr_320px] gap-5 items-stretch">
-        <StatsPanel player={player} yesterdayLogtime={yesterdayLogtime} />
+        <StatsPanel player={player} yesterdayLogtime={yesterdayLogtime} todayLogtime={todayLogtime} />
 
         <section className="nes-container with-title !bg-g42-paper shadow-[0_5px_0_var(--g42-line)] flex flex-col">
           <p className="title">Daily Claim</p>

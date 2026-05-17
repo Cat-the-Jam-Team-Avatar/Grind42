@@ -12,7 +12,7 @@ export default async function DashboardLayout({ children }) {
 
   const { data: player } = await supabase
     .from("users")
-    .select("intra_login, balance, current_streak")
+    .select("intra_login, balance, current_streak, display_name, profile_image_url, forty_two_profile")
     .eq("id", user.id)
     .maybeSingle();
 
