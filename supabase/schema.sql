@@ -35,6 +35,12 @@ create table if not exists users (
   claimed_today   boolean not null default false,
   last_claim_date date,
   streak_started_at date,
+  total_clicks    integer not null default 0,
+  xp              integer not null default 0,
+  pc_level        integer not null default 0,
+  streak_frozen_until date,
+  streak_milestone_reached integer not null default 0,
+  first_purchase_done boolean not null default false,
   created_at      timestamptz not null default now()
 );
 

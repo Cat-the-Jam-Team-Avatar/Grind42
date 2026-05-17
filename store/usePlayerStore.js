@@ -8,6 +8,9 @@ import {
 
 const USE_MOCK = true;
 
+// ── Batch sync config ─────────────────────────────────────────────────────
+const FLUSH_DEBOUNCE_MS = 3000; // Wait 3s of inactivity before syncing to DB
+
 const MOCK_PLAYER = {
   id: "mock-user-1",
   intra_login: "jdoe",
@@ -61,6 +64,11 @@ export const usePlayerStore = create((set, get) => ({
   combo_multiplier: 1,
   max_combo_xp_earned: false,
   _combo_reset_timer: null,
+  // Batch sync tracking
+  _unsaved_click_coins: 0,
+  _unsaved_click_xp: 0,
+  _unsaved_click_count: 0,
+  _flush_timer: null,
 
   loadPlayer: async () => {
     if (USE_MOCK) { get().setPlayer(MOCK_PLAYER); return; }
@@ -206,9 +214,20 @@ export const usePlayerStore = create((set, get) => ({
       combo_multiplier: comboMult,
       max_combo_xp_earned: newCombo >= 75 ? true : s.max_combo_xp_earned,
       _combo_reset_timer: timer,
+      // Accumulate unsaved earnings for batch sync
+      _unsaved_click_coins: s._unsaved_click_coins + earned,
+      _unsaved_click_xp: s._unsaved_click_xp + xpGained,
+      _unsaved_click_count: s._unsaved_click_count + 1,
     }));
 
     if (xpGained > 0) get().addXp(xpGained);
+
+    // Schedule a debounced flush (or flush immediately if window is full)
+    if (isWindowFull) {
+      get().flushClickEarnings();
+    } else {
+      get()._scheduleFlush();
+    }
 
     return { earned, combo: newCombo, multiplier: comboMult, xpGained, locked: isWindowFull };
   },
@@ -251,6 +270,66 @@ export const usePlayerStore = create((set, get) => ({
   deductBalance: (amount) =>
     set((s) => ({ balance: Math.max(0, s.balance - amount) })),
 
+  // ── Batch sync ────────────────────────────────────────────────────────
+  _scheduleFlush: () => {
+    const { _flush_timer } = get();
+    if (_flush_timer) clearTimeout(_flush_timer);
+    const timer = setTimeout(() => {
+      get().flushClickEarnings();
+    }, FLUSH_DEBOUNCE_MS);
+    set({ _flush_timer: timer });
+  },
+
+  flushClickEarnings: async () => {
+    const { _unsaved_click_coins, _unsaved_click_xp, _unsaved_click_count, _flush_timer, id } = get();
+
+    // Nothing to flush
+    if (_unsaved_click_coins === 0 && _unsaved_click_xp === 0) return;
+
+    if (_flush_timer) clearTimeout(_flush_timer);
+
+    // Snapshot and reset unsaved counters immediately (optimistic)
+    const coinsToSync = _unsaved_click_coins;
+    const xpToSync = _unsaved_click_xp;
+    const clicksToSync = _unsaved_click_count;
+
+    set({
+      _unsaved_click_coins: 0,
+      _unsaved_click_xp: 0,
+      _unsaved_click_count: 0,
+      _flush_timer: null,
+    });
+
+    // If user is not a real DB user (mock), just log — don't hit the API
+    const isMockUser = !id || id === "mock-user-1";
+    if (isMockUser) {
+      console.log(`[ClickSync] Flushed ${clicksToSync} clicks: +${coinsToSync.toFixed(1)} coins, +${xpToSync} XP (mock, not saved)`);
+      return;
+    }
+
+    // Real sync to database
+    try {
+      await fetch("/api/clicks/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          coins: coinsToSync,
+          xp: xpToSync,
+          clicks: clicksToSync,
+        }),
+      });
+    } catch (err) {
+      // On failure, add the unsaved amounts back so they'll be retried
+      console.error("[ClickSync] Failed to sync, will retry:", err);
+      set((s) => ({
+        _unsaved_click_coins: s._unsaved_click_coins + coinsToSync,
+        _unsaved_click_xp: s._unsaved_click_xp + xpToSync,
+        _unsaved_click_count: s._unsaved_click_count + clicksToSync,
+      }));
+      get()._scheduleFlush();
+    }
+  },
+
   // Selectors
   getPlayerLevel: () => calcPlayerLevel(get().xp),
   getXpProgress: () => xpProgressInLevel(get().xp),
@@ -269,3 +348,13 @@ export const usePlayerStore = create((set, get) => ({
     return click_locked_until !== null && Date.now() < click_locked_until;
   },
 }));
+
+// ── Page unload flush ───────────────────────────────────────────────────
+if (typeof window !== "undefined") {
+  const flush = () => usePlayerStore.getState().flushClickEarnings();
+
+  window.addEventListener("beforeunload", flush);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flush();
+  });
+}

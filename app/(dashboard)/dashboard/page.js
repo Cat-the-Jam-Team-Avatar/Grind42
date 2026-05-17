@@ -5,6 +5,8 @@ import StatsPanel from "@/components/dashboard/StatsPanel";
 import PixelDesk from "@/components/dashboard/PixelDesk";
 import StreakDisplay from "@/components/dashboard/StreakDisplay";
 import DailyClaimButton from "@/components/dashboard/DailyClaimButton";
+import CampusClicker from "@/components/dashboard/CampusClicker";
+import PlayerStoreHydrator from "@/components/app/PlayerStoreHydrator";
 import { fetchYesterdayLogtimeDetails } from "@/lib/42api/logtime";
 import {
   buildFortyTwoProfilePatch,
@@ -77,6 +79,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Hydrate Zustand store with server-fetched player data */}
+      <PlayerStoreHydrator player={player} />
+
       {/* ── Row 1: Profile + Daily Claim side by side ── */}
       <div className="grid grid-cols-1 min-[860px]:grid-cols-[1fr_320px] gap-5 items-stretch">
         <StatsPanel player={player} yesterdayLogtime={yesterdayLogtime} />
@@ -105,11 +110,13 @@ export default async function DashboardPage() {
       {/* ── Row 2: Streak (full width) ── */}
       <StreakDisplay streak={player?.current_streak ?? 0} />
 
-      {/* ── Row 3: Pixel Desk (full width) ── */}
+      {/* ── Row 3: Sanal Cluster — Clicker + Pixel Desk ── */}
       <section className="nes-container with-title !bg-g42-paper shadow-[0_5px_0_var(--g42-line)] min-w-0">
         <p className="title">Sanal Cluster</p>
+        <CampusClicker />
         <PixelDesk inventory={player?.inventory ?? []} />
       </section>
     </div>
   );
 }
+

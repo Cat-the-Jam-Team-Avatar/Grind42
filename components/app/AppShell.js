@@ -1,14 +1,11 @@
 import AppNav from "./AppNav";
 import ThemeToggle from "@/components/theme/ThemeToggle";
-import { CoinIcon } from "@/components/ui/PixelSprite";
-
-function formatCoins(value) {
-  return Number(value ?? 0).toLocaleString("tr-TR");
-}
+import LiveBalanceBadge from "./LiveBalanceBadge";
 
 export default function AppShell({ children, player }) {
   const login = player?.intra_login ?? "cadet";
   const initials = login.slice(0, 2).toUpperCase();
+  const serverBalance = player?.balance ?? 0;
 
   return (
     <div className="min-h-screen text-g42-ink bg-[radial-gradient(var(--g42-grid)_1px,transparent_1px),linear-gradient(180deg,var(--g42-bg),var(--g42-bg-2))] [background-size:12px_12px,auto] flex flex-col">
@@ -40,11 +37,7 @@ export default function AppShell({ children, player }) {
 
           {/* Zone 3: actions */}
           <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-[5px] px-[10px] py-[5px] border-[3px] border-g42-line bg-g42-coin shadow-[3px_3px_0_var(--g42-line)] font-[var(--font-silkscreen),monospace] text-[13px] text-g42-coin-ink font-bold whitespace-nowrap">
-              <CoinIcon size={16} />
-              <span>{formatCoins(player?.balance)}</span>
-              <span className="text-[9px] opacity-70">LC</span>
-            </div>
+            <LiveBalanceBadge serverBalance={serverBalance} />
             <ThemeToggle size="sm" />
           </div>
         </div>
@@ -64,11 +57,7 @@ export default function AppShell({ children, player }) {
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <div className="flex items-center gap-[4px] px-[8px] py-[4px] border-[3px] border-g42-line bg-g42-coin shadow-[2px_2px_0_var(--g42-line)] font-[var(--font-silkscreen),monospace] text-[12px] text-g42-coin-ink font-bold whitespace-nowrap">
-                <CoinIcon size={14} />
-                <span>{formatCoins(player?.balance)}</span>
-                <span className="text-[9px] opacity-70">LC</span>
-              </div>
+              <LiveBalanceBadge serverBalance={serverBalance} size="sm" />
               <ThemeToggle size="sm" />
             </div>
           </div>
@@ -84,3 +73,4 @@ export default function AppShell({ children, player }) {
     </div>
   );
 }
+

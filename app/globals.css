@@ -200,3 +200,55 @@ html[data-theme="dark"] {
 .nes-text.is-disabled {
   color: var(--g42-muted) !important;
 }
+
+/* ── Campus Clicker Animations ──────────────────────────────────────────── */
+
+@keyframes g42-glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 12px 2px var(--g42-coin), 0 0 24px 4px rgba(255, 200, 58, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 20px 6px var(--g42-coin), 0 0 40px 12px rgba(255, 200, 58, 0.25);
+  }
+}
+
+.g42-glow-pulse {
+  animation: g42-glow-pulse 2s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+@keyframes g42-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10% {
+    transform: translateX(-3px) rotate(-0.5deg);
+  }
+  20% {
+    transform: translateX(3px) rotate(0.5deg);
+  }
+  30% {
+    transform: translateX(-2px) rotate(-0.3deg);
+  }
+  40% {
+    transform: translateX(2px) rotate(0.3deg);
+  }
+  50% {
+    transform: translateX(-1px);
+  }
+  60% {
+    transform: translateX(1px);
+  }
+}
+
+.g42-shake {
+  animation: g42-shake 0.4s ease-in-out;
+}
+
+.g42-clicker-locked {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px) grayscale(0.8);
+  border-radius: 4px;
+}
