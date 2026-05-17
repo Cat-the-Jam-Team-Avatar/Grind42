@@ -1,0 +1,321 @@
+"use client";
+
+import { useState, useCallback, useEffect, useRef } from "react";
+import PixelSprite from "@/components/ui/PixelSprite";
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Koordinat sistemi (container'ın %'si)
+
+   COR_Y  yatay koridorlar   → [13, 30, 45, 60, 75]
+   ROW_Y  masa sıraları      → [22, 37, 52, 67, 82]
+   COL_X  masa sütunları     → [6, 12.5, 19, 25.5, 38.5, 45, 51.5, 58]
+   MID_X  orta dikey koridor → 32
+
+   Karakter HEP koridor node'unda durur (masa node'u yok).
+   Durma noktaları = COL_X × COR_Y  →  "masanın önü"
+────────────────────────────────────────────────────────────────────────── */
+
+const COR_Y  = [30, 45, 60, 75];   // 13 kaldırıldı → karakter duvardan geçmez
+const ROW_Y  = [22, 37, 52, 67, 82];
+const COL_X  = [6, 12.5, 19, 25.5, 38.5, 45, 51.5, 58];
+const MID_X  = 32;
+const ALL_X  = [6, 12.5, 19, 25.5, MID_X, 38.5, 45, 51.5, 58];
+const TABLE_W = "6%";
+const STEP_MS = 300; // ms / adım → "tık tık tık" hissi
+
+/* ── Graf ── */
+
+function buildGraph() {
+  const G   = {};
+  const add  = (id, x, y) => { G[id] = { x, y, adj: [] }; };
+  const link = (a, b) => {
+    if (!G[a] || !G[b]) return;
+    if (!G[a].adj.includes(b)) G[a].adj.push(b);
+    if (!G[b].adj.includes(a)) G[b].adj.push(a);
+  };
+
+  // Yatay koridor node'ları
+  COR_Y.forEach((cy) => ALL_X.forEach((x) => add(`c_${x}_${cy}`, x, cy)));
+
+  // Orta dikey koridor: masa sırası yüksekliklerinde ek node
+  ROW_Y.forEach((ry) => add(`c_${MID_X}_${ry}`, MID_X, ry));
+
+  // Yatay bağlantılar (her koridor satırında tüm x zinciri)
+  COR_Y.forEach((cy) => {
+    for (let i = 0; i < ALL_X.length - 1; i++)
+      link(`c_${ALL_X[i]}_${cy}`, `c_${ALL_X[i + 1]}_${cy}`);
+  });
+
+  // Dikey bağlantılar (sadece x=32, y sıralı)
+  const midIds = [
+    ...COR_Y.map((y) => `c_${MID_X}_${y}`),
+    ...ROW_Y.map((y) => `c_${MID_X}_${y}`),
+  ].sort((a, b) => G[a].y - G[b].y);
+  for (let i = 0; i < midIds.length - 1; i++) link(midIds[i], midIds[i + 1]);
+
+  return G;
+}
+
+const GRAPH = buildGraph();
+
+// Durma noktaları = masanın önündeki koridor pozisyonları
+const STOP_IDS = COL_X.flatMap((x) => COR_Y.map((cy) => `c_${x}_${cy}`));
+
+/* ── BFS ── */
+
+function bfs(startId, endId) {
+  if (startId === endId) return [startId];
+  const queue   = [[startId]];
+  const visited = new Set([startId]);
+  while (queue.length) {
+    const path = queue.shift();
+    const curr = path[path.length - 1];
+    for (const nb of GRAPH[curr].adj) {
+      if (nb === endId) return [...path, nb];
+      if (!visited.has(nb)) { visited.add(nb); queue.push([...path, nb]); }
+    }
+  }
+  return [startId];
+}
+
+/* ── Yardımcılar ── */
+
+function pickStop(excludeId) {
+  const pool = STOP_IDS.filter((id) => id !== excludeId);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function normalizeInventory(inventory) {
+  return (inventory ?? []).map((item) =>
+    typeof item === "string" ? item : item?.item_id ?? item?.id,
+  );
+}
+
+/* ── Dekorasyon pozisyonları ──
+   Masa (COL_X × ROW_Y) ve koridorlardan (COR_Y, x=32) uzak tutuldu.
+   Bahçe: x > 64   |   Cluster çevresi: üst y≈8, sol x≈2, alt y≈92, sağ kenar x≈63
+────────────────────────────────────────────────────────────────────────── */
+
+const DECO_POSITIONS = [
+  // Cluster sağ kenarı — dekor için ideal çizgi
+  { id: "r2", x: 65, y: 30 },
+  { id: "r3", x: 65, y: 44 },
+  { id: "r4", x: 65, y: 58 },
+  { id: "r5", x: 65, y: 72 },
+  { id: "r6", x: 65, y: 85 },
+  // Bahçe / teras iç kısım
+  { id: "g2", x: 86, y: 25 },
+  { id: "g3", x: 76, y: 40 },
+  { id: "g4", x: 88, y: 55 },
+  { id: "g5", x: 72, y: 68 },
+  { id: "g6", x: 82, y: 80 },
+];
+
+function DecoGrid() {
+  return (
+    <>
+      {DECO_POSITIONS.map(({ id, x, y }) => (
+        <div
+          key={id}
+          title={id}
+          style={{
+            position: "absolute",
+            left: `${x}%`,
+            top: `${y}%`,
+            transform: "translate(-50%, -50%)",
+            zIndex: Math.floor(y) + 3,
+            width: 14,
+            height: 14,
+            background: "#f5c842",
+            border: "2px solid #8a6d00",
+            imageRendering: "pixelated",
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
+/* ── Masa + bilgisayar grid'i ── */
+
+function TableGrid() {
+  return (
+    <>
+      {ROW_Y.map((y) =>
+        COL_X.map((x) => (
+          <div
+            key={`${x}-${y}`}
+            style={{
+              position: "absolute",
+              left: `${x}%`,
+              top: `${y}%`,
+              transform: "translate(-50%, -50%)",
+              width: TABLE_W,
+              zIndex: Math.floor(y) + 1,
+            }}
+          >
+            {/* Masa */}
+            <img
+              src="/cluster/table/white_table.png"
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              style={{ display: "block", width: "100%", imageRendering: "pixelated" }}
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/computer/computerone.png"
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              style={{
+                position: "absolute",
+                top: "-30%",
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: "55%",
+                imageRendering: "pixelated",
+              }}
+            />
+          </div>
+        )),
+      )}
+    </>
+  );
+}
+
+/* ── Karakter ──
+   - Koridordaki bir durma noktasında (masanın önü) başlar
+   - BFS ile rota hesaplanır
+   - Her adım STEP_MS ms sonra anında snap eder → "tık tık tık"
+   - Masaya varınca 1–3s bekler, yeni masa seçer
+────────────────────────────────────────────────────────────────────────── */
+
+function Character() {
+  const initStopId = useRef(STOP_IDS[Math.floor(Math.random() * STOP_IDS.length)]);
+  const initNode   = GRAPH[initStopId.current];
+
+  const [pos, setPos]             = useState({ x: initNode.x, y: initNode.y });
+  const [moving, setMoving]       = useState(false);
+  const [facingLeft, setFacingLeft] = useState(false);
+  const remainingPath             = useRef([]);
+  const currentStop               = useRef(initStopId.current);
+  const timerRef                  = useRef(null);
+
+  const scheduleStep = useCallback(() => {
+    if (remainingPath.current.length > 0) {
+      const nodeId    = remainingPath.current.shift();
+      const { x, y } = GRAPH[nodeId];
+      setPos((prev) => {
+        if (x !== prev.x) setFacingLeft(x < prev.x);
+        return { x, y };
+      });
+      setMoving(true);
+      timerRef.current = setTimeout(scheduleStep, STEP_MS);
+    } else {
+      setMoving(false); // masaya ulaştı → idle
+      const idleMs = 800 + Math.random() * 2200;
+      timerRef.current = setTimeout(() => {
+        const newStop         = pickStop(currentStop.current);
+        const path            = bfs(currentStop.current, newStop);
+        currentStop.current   = newStop;
+        remainingPath.current = path.slice(1);
+        scheduleStep();
+      }, idleMs);
+    }
+  }, []);
+
+  useEffect(() => {
+    timerRef.current = setTimeout(scheduleStep, 500 + Math.random() * 500);
+    return () => clearTimeout(timerRef.current);
+  }, [scheduleStep]);
+
+  return (
+    <div
+      className="absolute pointer-events-none"
+      style={{
+        left: `${pos.x}%`,
+        top: `${pos.y}%`,
+        transform: "translate(-50%, -50%)",
+        zIndex: Math.floor(pos.y),
+        transition: "left 180ms linear, top 180ms linear",
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={moving ? "/cluster/duck/duck-walk.gif" : "/cluster/duck/duck-idle.gif"}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        style={{ width: 20, imageRendering: "pixelated", transform: facingLeft ? "scaleX(-1)" : "none" }}
+      />
+    </div>
+  );
+}
+
+/* ── Inventory item ── */
+
+const ITEM_POSITIONS = {
+  loba_cup:        { x: 60, y: 34 },
+  pixel_cat:       { x: 3,  y: 78 },
+  ergonomic_chair: { x: 60, y: 62 },
+  mech_keyboard:   { x: 3,  y: 20 },
+  dual_monitor:    { x: 60, y: 20 },
+  plant:           { x: 3,  y: 50 },
+};
+
+const SPRITE_MAP = {
+  plant: "plant", loba_cup: "cup", pixel_cat: "cat",
+  ergonomic_chair: "chair", mech_keyboard: "keyboard", dual_monitor: "monitor",
+};
+
+function MapItem({ itemId, pos }) {
+  const spriteName = SPRITE_MAP[itemId];
+  if (!spriteName) return null;
+  return (
+    <div
+      className="absolute pointer-events-none"
+      style={{
+        left: `${pos.x}%`,
+        top: `${pos.y}%`,
+        transform: "translate(-50%, -50%)",
+        zIndex: Math.floor(pos.y) + 2,
+      }}
+    >
+      <PixelSprite name={spriteName} scale={2} />
+    </div>
+  );
+}
+
+/* ── Ana bileşen ── */
+
+export default function ClusterMap({ inventory = [] }) {
+  const ownedIds = normalizeInventory(inventory);
+
+  return (
+    <div
+      className="relative w-full overflow-hidden border-[4px] border-g42-line shadow-[0_5px_0_var(--g42-line)]"
+      style={{ aspectRatio: "1698 / 926" }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/cluster/bg.png"
+        alt="42 Cluster"
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ imageRendering: "pixelated" }}
+        draggable={false}
+      />
+
+      <TableGrid />
+      <DecoGrid />
+
+      {ownedIds.map((id) => {
+        const pos = ITEM_POSITIONS[id];
+        if (!pos) return null;
+        return <MapItem key={id} itemId={id} pos={pos} />;
+      })}
+
+      <Character />
+    </div>
+  );
+}

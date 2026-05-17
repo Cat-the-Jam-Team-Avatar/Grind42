@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { createServerClient } from "@/lib/supabase/server";
 import StatsPanel from "@/components/dashboard/StatsPanel";
-import PixelDesk from "@/components/dashboard/PixelDesk";
+import ClusterMap from "@/components/dashboard/ClusterMap";
 import StreakDisplay from "@/components/dashboard/StreakDisplay";
 import DailyClaimButton from "@/components/dashboard/DailyClaimButton";
 import CampusClicker from "@/components/dashboard/CampusClicker";
@@ -132,7 +132,7 @@ export default async function DashboardPage() {
       <section className="nes-container with-title !bg-g42-paper shadow-[0_5px_0_var(--g42-line)] min-w-0">
         <p className="title">Sanal Cluster</p>
         <CampusClicker />
-        <PixelDesk inventory={player?.inventory ?? []} />
+        <ClusterMap inventory={player?.inventory ?? []} />
       </section>
     </div>
   );
