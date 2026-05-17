@@ -1,12 +1,3 @@
-import { create } from "zustand";
-
-export const useInventoryStore = create((set) => ({
-  ownedIds: [],
-
-  setInventory: (ids) => set({ ownedIds: ids }),
-
-  addItem: (id) =>
-    set((state) => ({
-      ownedIds: state.ownedIds.includes(id) ? state.ownedIds : [...state.ownedIds, id],
-    })),
-}));
+// Inventory state usePlayerStore ile birleştirildi.
+// Bu dosya geriye dönük uyumluluk için usePlayerStore'u re-export eder.
+export { usePlayerStore as useInventoryStore } from "./usePlayerStore";
