@@ -1,10 +1,28 @@
-import { Press_Start_2P } from "next/font/google";
+import { Pixelify_Sans, Press_Start_2P, Silkscreen } from "next/font/google";
+import Script from "next/script";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import themeBootScript from "@/components/theme/themeBootScript";
 import "./globals.css";
 
-const pixelFont = Press_Start_2P({
+const pixelify = Pixelify_Sans({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-pixelify",
+  display: "swap",
+});
+
+const silkscreen = Silkscreen({
+  weight: ["400", "700"],
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-silkscreen",
+  display: "swap",
+});
+
+const pressStart = Press_Start_2P({
   weight: "400",
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
   variable: "--font-pixel",
+  display: "swap",
 });
 
 export const metadata = {
@@ -14,9 +32,18 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="tr" className={`${pixelFont.variable} h-full`}>
-      <body className="min-h-full flex flex-col bg-[#0a0a0a] text-white">
-        {children}
+    <html
+      lang="tr"
+      className={`${pixelify.variable} ${silkscreen.variable} ${pressStart.variable} h-full`}
+      suppressHydrationWarning
+    >
+      <body className="min-h-full">
+        <Script
+          id="grind42-theme"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeBootScript() }}
+        />
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );

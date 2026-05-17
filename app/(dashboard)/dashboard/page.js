@@ -5,13 +5,15 @@ import StatsPanel from "@/components/dashboard/StatsPanel";
 import PixelDesk from "@/components/dashboard/PixelDesk";
 import StreakDisplay from "@/components/dashboard/StreakDisplay";
 import DailyClaimButton from "@/components/dashboard/DailyClaimButton";
-import AuthDevPanel from "@/components/dashboard/AuthDevPanel";
 import { fetchYesterdayLogtimeDetails } from "@/lib/42api/logtime";
 import {
   buildFortyTwoProfilePatch,
   fetchFortyTwoPublicProfile,
   getPlayerFortyTwoTimeZone,
 } from "@/lib/auth/forty-two";
+import { getMultiplier } from "@/lib/streak";
+
+/* ── Server helpers ──────────────────────────────────────────────────────── */
 
 async function syncMissingFortyTwoProfile(supabase, player) {
   if (!player?.intra_login || player.profile_image_url) return player;
@@ -39,52 +41,75 @@ async function syncMissingFortyTwoProfile(supabase, player) {
   }
 }
 
+async function fetchPlayerLogtime(player) {
+  if (!player?.intra_login) return null;
+
+  try {
+    return await fetchYesterdayLogtimeDetails(
+      player.intra_login,
+      getPlayerFortyTwoTimeZone(player),
+    );
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "42 logtime alınamadı.",
+    };
+  }
+}
+
+/* ── Page Component ──────────────────────────────────────────────────────── */
+
 export default async function DashboardPage() {
   const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   let { data: player } = await supabase
     .from("users")
-    .select("*")
+    .select("*, inventory(item_id)")
     .eq("id", user.id)
     .single();
 
   player = await syncMissingFortyTwoProfile(supabase, player);
 
-  let yesterdayLogtime = null;
-
-  if (player?.intra_login) {
-    try {
-      yesterdayLogtime = await fetchYesterdayLogtimeDetails(
-        player.intra_login,
-        getPlayerFortyTwoTimeZone(player)
-      );
-    } catch (error) {
-      yesterdayLogtime = {
-        error: error instanceof Error ? error.message : "42 logtime alınamadı.",
-      };
-    }
-  }
+  const multiplier = getMultiplier(player?.current_streak ?? 0);
+  const yesterdayLogtime = await fetchPlayerLogtime(player);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
-      {/* Sol Panel */}
-      <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
+      {/* ── Row 1: Profile + Daily Claim side by side ── */}
+      <div className="grid grid-cols-1 min-[860px]:grid-cols-[1fr_320px] gap-5 items-stretch">
         <StatsPanel player={player} yesterdayLogtime={yesterdayLogtime} />
-        <StreakDisplay streak={player?.current_streak ?? 0} />
+
+        <section className="nes-container with-title !bg-g42-paper shadow-[0_5px_0_var(--g42-line)] flex flex-col">
+          <p className="title">Daily Claim</p>
+          <div className="flex flex-col gap-3 flex-1 justify-center">
+            <div className="text-center">
+              <p className="m-0 font-[var(--font-silkscreen),monospace] text-[10px] text-g42-muted uppercase tracking-wider">
+                Bugünkü çarpan
+              </p>
+              <p className="m-0 font-[var(--font-silkscreen),monospace] text-g42-coin-d text-[52px] leading-none tracking-tight mt-1">
+                x{multiplier.toFixed(1)}
+              </p>
+              <p className="m-0 font-[var(--font-pixelify),system-ui,sans-serif] text-[14px] text-g42-ink-soft leading-snug mt-2">
+                {player?.claimed_today
+                  ? "Bugünün ödülü alındı ✓"
+                  : "Dünkü logtime ödülünü topla"}
+              </p>
+            </div>
+            <DailyClaimButton claimed={player?.claimed_today ?? false} />
+          </div>
+        </section>
       </div>
 
-      {/* Merkez: Pixel Masa */}
-      <div className="flex flex-col items-center justify-center gap-4">
+      {/* ── Row 2: Streak (full width) ── */}
+      <StreakDisplay streak={player?.current_streak ?? 0} />
+
+      {/* ── Row 3: Pixel Desk (full width) ── */}
+      <section className="nes-container with-title !bg-g42-paper shadow-[0_5px_0_var(--g42-line)] min-w-0">
+        <p className="title">Sanal Cluster</p>
         <PixelDesk inventory={player?.inventory ?? []} />
-        <DailyClaimButton claimed={player?.claimed_today ?? false} />
-      </div>
-
-      <AuthDevPanel
-        user={user}
-        player={player}
-        yesterdayLogtime={yesterdayLogtime}
-      />
+      </section>
     </div>
   );
 }
