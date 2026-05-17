@@ -3,18 +3,35 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import PixelSprite, { CoinIcon } from "@/components/ui/PixelSprite";
+import { usePlayerStore } from "@/store/usePlayerStore";
+import UseItemButton from "./UseItemButton";
 
 const SPRITE_MAP = {
   chair: "chair",
+  "coffee-machine": "cup",
   keyboard: "keyboard",
+  "plant-pot": "plant",
   monitor: "monitor",
+  "sleeping-cat": "cat",
+  "toilet-paper": "scroll",
+  "toilet-plant": "plant",
+  "vending-machine": "monitor",
+  duck: "book",
+  flowers: "plant",
+  lamp: "monitor",
   scroll: "scroll",
   cat: "cat",
   frieren: "book",
   cup: "cup",
 };
 
-export default function MarketItem({ item, canAfford, owned }) {
+export default function MarketItem({
+  canAfford,
+  equipped = false,
+  item,
+  owned,
+  quantity = 0,
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
@@ -27,17 +44,21 @@ export default function MarketItem({ item, canAfford, owned }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ itemId: item.id }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
 
     setFeedback(res.ok ? "Satın alındı." : data.error);
     setLoading(false);
 
     if (res.ok) {
+      if (Number.isFinite(Number(data.newBalance))) {
+        usePlayerStore.setState({ balance: Number(data.newBalance) });
+      }
+
       router.refresh();
     }
   }
 
-  const disabled = loading || (!item.consumable && owned) || !canAfford;
+  const disabled = loading || (item.category !== "consumable" && owned) || !canAfford;
   const spriteName = SPRITE_MAP[item.sprite] ?? "coin";
 
   return (
@@ -59,22 +80,42 @@ export default function MarketItem({ item, canAfford, owned }) {
           <CoinIcon size={16} />
           {item.price.toLocaleString("tr-TR")} LC
         </span>
+        {item.category === "consumable" && quantity > 0 && (
+          <span className="text-g42-ink-soft text-[11px]">x{quantity}</span>
+        )}
       </div>
-      {!item.consumable && owned ? (
-        <span className="inline-flex items-center m-0 font-[var(--font-silkscreen),monospace] tracking-[0] text-g42-ink gap-[6px] border-[3px] border-g42-line bg-g42-paper-2 px-2 py-[6px] text-[11px]">
-          Sahipsin
-        </span>
+      {item.category !== "consumable" && owned ? (
+        <div className="flex min-w-0 flex-wrap items-start gap-2">
+          <span className="inline-flex items-center m-0 font-[var(--font-silkscreen),monospace] tracking-[0] text-g42-ink gap-[6px] border-[3px] border-g42-line bg-g42-paper-2 px-2 py-[6px] text-[11px]">
+            Sahipsin
+          </span>
+          <UseItemButton
+            compact
+            equipped={equipped}
+            item={item}
+            quantity={quantity || 1}
+          />
+        </div>
       ) : (
-        <button
-          type="button"
-          className={`nes-btn text-xs ${
-            !canAfford ? "is-disabled" : "is-primary"
-          }`}
-          disabled={disabled}
-          onClick={handleBuy}
-        >
-          {loading ? "..." : "Satın Al"}
-        </button>
+        <div className="flex min-w-0 flex-wrap items-start gap-2">
+          <button
+            type="button"
+            className={`nes-btn text-xs ${
+              !canAfford ? "is-disabled" : "is-primary"
+            }`}
+            disabled={disabled}
+            onClick={handleBuy}
+          >
+            {loading ? "..." : "Satın Al"}
+          </button>
+          {owned && item.category === "consumable" && (
+            <UseItemButton
+              compact
+              item={item}
+              quantity={quantity}
+            />
+          )}
+        </div>
       )}
       {feedback && (
         <p

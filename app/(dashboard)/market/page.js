@@ -1,21 +1,29 @@
 export const dynamic = "force-dynamic";
 
 import { createServerClient } from "@/lib/supabase/server";
+import { fetchUserInventory } from "@/lib/market/inventory";
 import MarketGrid from "@/components/market/MarketGrid";
 import InventoryPanel from "@/components/market/InventoryPanel";
-import { MARKET_ITEMS } from "@/lib/market-items";
+import { MARKET_CATALOG } from "@/lib/economy";
 
 export default async function MarketPage() {
   const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const { data: player } = await supabase
-    .from("users")
-    .select("balance, inventory(item_id)")
-    .eq("id", user.id)
-    .single();
+  const [{ data: player }, { data: inventory }] = await Promise.all([
+    supabase
+      .from("users")
+      .select("balance")
+      .eq("id", user.id)
+      .single(),
+    fetchUserInventory(supabase, user.id),
+  ]);
 
-  const ownedIds = (player?.inventory ?? []).map((item) => item.item_id);
+  const ownedIds = inventory?.ownedIds ?? [];
+  const quantityById = inventory?.quantityById ?? {};
+  const equippedById = inventory?.equippedById ?? {};
   const balance = player?.balance ?? 0;
 
   return (
@@ -33,8 +41,19 @@ export default async function MarketPage() {
         </div>
       </section>
 
-      <MarketGrid items={MARKET_ITEMS} balance={balance} ownedIds={ownedIds} />
-      <InventoryPanel ownedIds={ownedIds} allItems={MARKET_ITEMS} />
+      <MarketGrid
+        items={MARKET_CATALOG}
+        balance={balance}
+        equippedById={equippedById}
+        ownedIds={ownedIds}
+        quantityById={quantityById}
+      />
+      <InventoryPanel
+        ownedIds={ownedIds}
+        allItems={MARKET_CATALOG}
+        equippedById={equippedById}
+        quantityById={quantityById}
+      />
     </div>
   );
 }

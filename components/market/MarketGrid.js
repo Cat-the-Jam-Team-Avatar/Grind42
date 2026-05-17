@@ -3,13 +3,19 @@
 import MarketItem from "./MarketItem";
 
 const CATEGORY_LABELS = {
-  upgrade: "Geliştirmeler",
   consumable: "Taktiksel Eşyalar",
   cosmetic: "Kozmetik & Prestij",
+  theme: "Masa Temaları",
 };
 
-export default function MarketGrid({ items, balance, ownedIds }) {
-  const categories = ["upgrade", "consumable", "cosmetic"];
+export default function MarketGrid({
+  balance,
+  equippedById,
+  items,
+  ownedIds,
+  quantityById,
+}) {
+  const categories = ["consumable", "cosmetic", "theme"];
 
   return (
     <div className="flex flex-col gap-5">
@@ -24,7 +30,9 @@ export default function MarketGrid({ items, balance, ownedIds }) {
                   key={item.id}
                   item={item}
                   canAfford={balance >= item.price}
+                  equipped={Boolean(equippedById?.[item.id])}
                   owned={ownedIds.includes(item.id)}
+                  quantity={quantityById?.[item.id] ?? 0}
                 />
               ))}
           </div>

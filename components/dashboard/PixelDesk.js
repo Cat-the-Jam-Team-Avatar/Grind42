@@ -5,9 +5,9 @@ import PixelSprite from "@/components/ui/PixelSprite";
 /* ── Inventory helpers ───────────────────────────────────────────────────── */
 
 function normalizeInventory(inventory) {
-  return (inventory ?? []).map((item) =>
-    typeof item === "string" ? item : item?.item_id ?? item?.id,
-  );
+  return (inventory ?? [])
+    .map((item) => (typeof item === "string" ? item : item?.item_id ?? item?.id))
+    .filter(Boolean);
 }
 
 /* ── Scene Layers ────────────────────────────────────────────────────────── */
@@ -71,14 +71,20 @@ export default function PixelDesk({ inventory }) {
       {/* Always: Plant */}
       <SpriteLayer name="plant" scale={2.5} className="left-[8%] bottom-[31%]" />
 
-      {/* Conditional: Loba cup */}
-      {has("loba_cup") && (
+      {(has("loba_cup") || has("coffee_machine") || has("espresso")) && (
         <SpriteLayer name="cup" scale={3.2} className="right-[7%] bottom-[31%]" />
       )}
 
-      {/* Conditional: Pixel cat */}
-      {has("pixel_cat") && (
+      {(has("pixel_cat") || has("sleeping_cat")) && (
         <SpriteLayer name="cat" scale={2.3} className="left-[18%] bottom-[17%]" />
+      )}
+
+      {(has("plant_pot") || has("flowers") || has("toilet_plant")) && (
+        <SpriteLayer name="plant" scale={2} className="left-[20%] bottom-[33%]" />
+      )}
+
+      {(has("vending_machine") || has("lamp")) && (
+        <SpriteLayer name="monitor" scale={2.1} className="right-[9%] bottom-[46%]" />
       )}
     </div>
   );

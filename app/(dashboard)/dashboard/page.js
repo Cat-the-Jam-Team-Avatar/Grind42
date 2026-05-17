@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { createServerClient } from "@/lib/supabase/server";
+import { fetchUserInventory } from "@/lib/market/inventory";
 import StatsPanel from "@/components/dashboard/StatsPanel";
 import PixelDesk from "@/components/dashboard/PixelDesk";
 import StreakDisplay from "@/components/dashboard/StreakDisplay";
@@ -85,11 +86,19 @@ export default async function DashboardPage() {
 
   let { data: player } = await supabase
     .from("users")
-    .select("*, inventory(item_id)")
+    .select("*")
     .eq("id", user.id)
     .single();
 
   player = await syncMissingFortyTwoProfile(supabase, player);
+
+  const { data: inventory } = await fetchUserInventory(supabase, user.id, {
+    includePurchases: false,
+  });
+  player = {
+    ...player,
+    inventory: inventory?.items ?? [],
+  };
 
   const multiplier = getMultiplier(player?.current_streak ?? 0);
   const yesterdayLogtime = await fetchPlayerLogtime(player);
