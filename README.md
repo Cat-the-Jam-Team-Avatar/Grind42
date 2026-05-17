@@ -13,6 +13,7 @@ Required `.env.local` values:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://PROJECT_REF.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY
 FT_API_CLIENT_ID=42_INTRA_CLIENT_ID
 FT_API_CLIENT_SECRET=42_INTRA_CLIENT_SECRET
 ```
@@ -71,7 +72,7 @@ Enabled: true
 Provider type: OAuth2
 ```
 
-To create or update this provider from the repo, temporarily add the service role key to `.env.local`:
+To create or update this provider from the repo, use the same server-only service role key from `.env.local`:
 
 ```env
 SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY
@@ -82,7 +83,5 @@ Then run:
 ```bash
 npm run auth:setup42
 ```
-
-Remove `SUPABASE_SERVICE_ROLE_KEY` from `.env.local` after setup if you do not need to run the command again.
 
 Run `supabase/schema.sql` after enabling auth so the callback route can create the matching `users` row under RLS.

@@ -36,15 +36,24 @@ function FloatingText({ id, x, y, text, color }) {
 
 const PARTICLE_COLORS = ["#ffc83a", "#fbb478", "#e85d2f", "#77dd77", "#75d0c1", "#fff8c0"];
 
+function seededParticleValue(id, index, salt) {
+  const value = Math.sin((id + 1) * (index + 1) * (salt + 3.17)) * 10000;
+  return value - Math.floor(value);
+}
+
 function ParticleBurst({ id, x, y }) {
-  const particles = useRef(
-    Array.from({ length: 8 }, (_, i) => ({
-      angle: (i / 8) * Math.PI * 2 + (Math.random() - 0.5) * 0.5,
-      distance: 30 + Math.random() * 50,
-      color: PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)],
-      size: 3 + Math.random() * 5,
-    }))
-  ).current;
+  const particles = Array.from({ length: 8 }, (_, i) => {
+    const colorIndex = Math.floor(
+      seededParticleValue(id, i, 3) * PARTICLE_COLORS.length,
+    );
+
+    return {
+      angle: (i / 8) * Math.PI * 2 + (seededParticleValue(id, i, 0) - 0.5) * 0.5,
+      color: PARTICLE_COLORS[colorIndex],
+      distance: 30 + seededParticleValue(id, i, 1) * 50,
+      size: 3 + seededParticleValue(id, i, 2) * 5,
+    };
+  });
 
   return (
     <>
@@ -184,6 +193,7 @@ export default function CampusClicker() {
   const [particles, setParticles] = useState([]);
   const [isShaking, setIsShaking] = useState(false);
   const [decayProgress, setDecayProgress] = useState(0);
+  const [clock, setClock] = useState(null);
 
   const containerRef = useRef(null);
   const decayTimerRef = useRef(null);
@@ -192,28 +202,41 @@ export default function CampusClicker() {
   // Combo decay progress tracking
   useEffect(() => {
     if (comboCount === 0) {
-      setDecayProgress(0);
       if (decayTimerRef.current) clearInterval(decayTimerRef.current);
       return;
     }
 
-    const decayMs = 1500 + 100; // Base decay (level 1 approximation)
-    const startTime = Date.now();
+    const frame = requestAnimationFrame(() => {
+      const decayMs = 1500 + 100; // Base decay (level 1 approximation)
+      const startTime = Date.now();
 
-    setDecayProgress(1);
-    decayTimerRef.current = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.max(0, 1 - elapsed / decayMs);
-      setDecayProgress(progress);
-      if (progress <= 0) clearInterval(decayTimerRef.current);
-    }, 50);
+      setDecayProgress(1);
+      decayTimerRef.current = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.max(0, 1 - elapsed / decayMs);
+        setDecayProgress(progress);
+        if (progress <= 0) clearInterval(decayTimerRef.current);
+      }, 50);
+    });
 
     return () => {
+      cancelAnimationFrame(frame);
       if (decayTimerRef.current) clearInterval(decayTimerRef.current);
     };
   }, [comboCount]);
 
-  const isLocked = clickLocked !== null && Date.now() < clickLocked;
+  useEffect(() => {
+    const tick = () => setClock(Date.now());
+    const timeout = setTimeout(tick, 0);
+    const interval = clickLocked ? setInterval(tick, 1000) : null;
+
+    return () => {
+      clearTimeout(timeout);
+      if (interval) clearInterval(interval);
+    };
+  }, [clickLocked]);
+
+  const isLocked = clickLocked !== null && (clock === null || clock < clickLocked);
 
   const handleClick = useCallback(
     (e) => {
