@@ -86,7 +86,11 @@ async function fetchTodayLogtime(player) {
 
   try {
     const timeZone = getPlayerFortyTwoTimeZone(player);
-    return await fetchLogtimeForDate(player.intra_login, getTodayDateString(timeZone), timeZone);
+    return await fetchLogtimeForDate(
+      player.intra_login,
+      getTodayDateString(timeZone),
+      timeZone,
+    );
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "42 logtime alınamadı.",
@@ -147,7 +151,11 @@ export default async function DashboardPage() {
 
       {/* ── Row 1: Profile + Daily Claim side by side ── */}
       <div className="grid grid-cols-1 min-[860px]:grid-cols-[1fr_320px] gap-5 items-stretch">
-        <StatsPanel player={player} yesterdayLogtime={yesterdayLogtime} todayLogtime={todayLogtime} />
+        <StatsPanel
+          player={player}
+          yesterdayLogtime={yesterdayLogtime}
+          todayLogtime={todayLogtime}
+        />
 
         <section className="nes-container with-title !bg-g42-paper shadow-[0_5px_0_var(--g42-line)] flex flex-col">
           <p className="title">Daily Claim</p>
@@ -177,9 +185,11 @@ export default async function DashboardPage() {
       <section className="nes-container with-title !bg-g42-paper shadow-[0_5px_0_var(--g42-line)] min-w-0">
         <p className="title">Sanal Cluster</p>
         <CampusClicker />
-        <ClusterMap inventory={player?.inventory ?? []} />
+        <ClusterMap
+          inventory={player?.inventory ?? []}
+          decoplacements={player?.deco_placements ?? {}}
+        />
       </section>
     </div>
   );
 }
-
