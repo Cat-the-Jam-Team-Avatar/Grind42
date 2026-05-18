@@ -219,6 +219,7 @@ export default function CampusClicker() {
   const containerRef = useRef(null);
   const decayTimerRef = useRef(null);
   const textIdRef = useRef(0);
+  const clickSoundRef = useRef(null);
 
   // Combo decay progress tracking
   useEffect(() => {
@@ -261,6 +262,17 @@ export default function CampusClicker() {
     };
   }, [clickLocked, clickWindowExpiresAt, resetExpiredClickWindow]);
 
+  useEffect(() => {
+    clickSoundRef.current = new Audio("/sfx/mouse-click-4.wav");
+    clickSoundRef.current.preload = "auto";
+    return () => {
+      if (clickSoundRef.current) {
+        clickSoundRef.current.pause();
+        clickSoundRef.current = null;
+      }
+    };
+  }, []);
+
   const isLocked = clickLocked !== null && (clock === null || clock < clickLocked);
 
   const handleClick = useCallback(
@@ -273,6 +285,11 @@ export default function CampusClicker() {
 
       const result = clickCampus();
       if (!result || result.frozen || result.locked) return;
+
+      if (clickSoundRef.current) {
+        clickSoundRef.current.currentTime = 0;
+        clickSoundRef.current.play().catch(() => {});
+      }
 
       const id = ++textIdRef.current;
 

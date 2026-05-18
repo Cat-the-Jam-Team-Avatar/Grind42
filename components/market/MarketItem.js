@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import PixelSprite, { CoinIcon } from "@/components/ui/PixelSprite";
 import { usePlayerStore } from "@/store/usePlayerStore";
@@ -35,8 +35,41 @@ export default function MarketItem({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const insufficientSoundRef = useRef(null);
+  const purchaseSoundRef = useRef(null);
+
+  useEffect(() => {
+    insufficientSoundRef.current = new Audio("/cluster/sound/click_insufficient.wav");
+    insufficientSoundRef.current.preload = "auto";
+    insufficientSoundRef.current.volume = 0.4;
+    return () => {
+      if (insufficientSoundRef.current) {
+        insufficientSoundRef.current.pause();
+        insufficientSoundRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    purchaseSoundRef.current = new Audio("/cluster/sound/click_purchasing.wav");
+    purchaseSoundRef.current.preload = "auto";
+    purchaseSoundRef.current.volume = 0.45;
+    return () => {
+      if (purchaseSoundRef.current) {
+        purchaseSoundRef.current.pause();
+        purchaseSoundRef.current = null;
+      }
+    };
+  }, []);
 
   async function handleBuy() {
+    if (!canAfford) {
+      if (insufficientSoundRef.current) {
+        insufficientSoundRef.current.currentTime = 0;
+        insufficientSoundRef.current.play().catch(() => {});
+      }
+      return;
+    }
     setLoading(true);
     setFeedback(null);
     const res = await fetch("/api/market", {
@@ -50,6 +83,10 @@ export default function MarketItem({
     setLoading(false);
 
     if (res.ok) {
+      if (purchaseSoundRef.current) {
+        purchaseSoundRef.current.currentTime = 0;
+        purchaseSoundRef.current.play().catch(() => {});
+      }
       if (Number.isFinite(Number(data.newBalance))) {
         usePlayerStore.setState({ balance: Number(data.newBalance) });
       }
@@ -58,7 +95,7 @@ export default function MarketItem({
     }
   }
 
-  const disabled = loading || (item.category !== "consumable" && owned) || !canAfford;
+  const disabled = loading || (item.category !== "consumable" && owned);
   const spriteName = SPRITE_MAP[item.sprite] ?? "coin";
 
   return (

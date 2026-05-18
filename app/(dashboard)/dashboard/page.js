@@ -8,6 +8,7 @@ import StreakDisplay from "@/components/dashboard/StreakDisplay";
 import DailyClaimButton from "@/components/dashboard/DailyClaimButton";
 import CampusClicker from "@/components/dashboard/CampusClicker";
 import PlayerStoreHydrator from "@/components/app/PlayerStoreHydrator";
+import OfficeAmbience from "@/components/app/OfficeAmbience";
 import {
   fetchYesterdayLogtimeDetails,
   fetchLogtimeForDate,
@@ -106,6 +107,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-5">
+      <OfficeAmbience />
       {/* Hydrate Zustand store with server-fetched player data */}
       <PlayerStoreHydrator player={player} />
 
