@@ -3,6 +3,7 @@ import ThemeToggle from "@/components/theme/ThemeToggle";
 import LiveBalanceBadge from "./LiveBalanceBadge";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import LevelUpSound from "./LevelUpSound";
+import SoundToggle from "./SoundToggle";
 
 export default function AppShell({ children, player }) {
   const login = player?.intra_login ?? "cadet";
@@ -41,6 +42,7 @@ export default function AppShell({ children, player }) {
           {/* Zone 3: actions */}
           <div className="flex items-center gap-2 shrink-0">
             <LiveBalanceBadge serverBalance={serverBalance} />
+            <SoundToggle size="sm" />
             <ThemeToggle size="sm" />
           </div>
         </div>
@@ -61,6 +63,7 @@ export default function AppShell({ children, player }) {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <LiveBalanceBadge serverBalance={serverBalance} size="sm" />
+              <SoundToggle size="sm" />
               <ThemeToggle size="sm" />
             </div>
           </div>
