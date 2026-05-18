@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import PixelSprite from "@/components/ui/PixelSprite";
 
@@ -144,7 +145,12 @@ function DecoGrid() {
 
 /* ── Masa + bilgisayar grid'i ── */
 
-function TableGrid({ desks, onDeskClick }) {
+function TableGrid({ desks, onDeskClick, tableColor }) {
+  // Tüm masalar için global renk — varsayılan beyaz
+  const tableImg =
+    TABLE_IMAGE_MAP[tableColor] ??
+    "/cluster/market/cosmetic/table/table-white.png";
+
   return (
     <>
       {ROW_Y.map((y) =>
@@ -180,7 +186,7 @@ function TableGrid({ desks, onDeskClick }) {
                 {/* Masa */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/cluster/market/cosmetic/table/table-white.png"
+                  src={tableImg}
                   alt=""
                   aria-hidden="true"
                   draggable={false}
@@ -316,6 +322,19 @@ const SPRITE_MAP = {
   dual_monitor: "monitor",
 };
 
+// Envanterdeki masa renk varyasyonlarını resme eşler
+const TABLE_IMAGE_MAP = {
+  table_blue: "/cluster/market/cosmetic/table/table-blue.png",
+  table_pink: "/cluster/market/cosmetic/table/table-pink.png",
+  table_white: "/cluster/market/cosmetic/table/table-white.png",
+};
+
+const TABLE_LABELS = {
+  table_blue: "Mavi",
+  table_pink: "Pembe",
+  table_white: "Beyaz",
+};
+
 function MapItem({ itemId, pos }) {
   const spriteName = SPRITE_MAP[itemId];
   if (!spriteName) return null;
@@ -343,6 +362,9 @@ function DeskActionModal({
   onClose,
   onBuy,
   onUpgrade,
+  ownedTableIds,
+  currentTableColor,
+  onColorChange,
 }) {
   return (
     <AnimatePresence>
@@ -395,6 +417,48 @@ function DeskActionModal({
               </p>
             )}
 
+            {/* Masa rengi picker — sadece envanterde en az bir renk varsa göster */}
+            {ownedTableIds?.length > 0 && (
+              <div className="w-full">
+                <p className="text-xs text-g42-gray mb-2 text-center">
+                  Masa Rengi
+                </p>
+                <div className="flex justify-center gap-2">
+                  {ownedTableIds.map((colorId) => {
+                    // Renk seçilmemişse varsayılan beyaz aktif kabul edilir
+                    const effectiveColor = currentTableColor ?? "table_white";
+                    const isActive = effectiveColor === colorId;
+                    return (
+                      <button
+                        key={colorId}
+                        type="button"
+                        title={TABLE_LABELS[colorId]}
+                        onClick={() => onColorChange(colorId)}
+                        className={`border-[3px] p-[2px] transition-none ${
+                          isActive
+                            ? "border-white"
+                            : "border-transparent hover:border-g42-gray"
+                        }`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={TABLE_IMAGE_MAP[colorId]}
+                          alt={TABLE_LABELS[colorId]}
+                          draggable={false}
+                          style={{
+                            width: 32,
+                            height: 32,
+                            imageRendering: "pixelated",
+                            objectFit: "contain",
+                          }}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <button
               type="button"
               className={`nes-btn w-full ${deskData?.hasComputer ? "is-warning" : "is-success"}`}
@@ -415,7 +479,17 @@ function DeskActionModal({
 /* ── Ana bileşen ── */
 
 export default function ClusterMap({ inventory = [] }) {
+  const router = useRouter();
   const ownedIds = normalizeInventory(inventory);
+  // Envanterdeki masa renk varyasyonlarını filtrele
+  const ownedTableIds = ownedIds.filter((id) => TABLE_IMAGE_MAP[id]);
+
+  // Sayfa yüklendiğinde DB'deki equipped rengi bul, başlangıç değeri olarak kullan
+  const initialTableColor =
+    (inventory ?? []).find(
+      (item) => TABLE_IMAGE_MAP[item?.id] && item?.is_equipped,
+    )?.id ?? null;
+  const [tableColor, setTableColor] = useState(initialTableColor);
 
   // Mock State for Desks
   const [desks, setDesks] = useState({
@@ -443,6 +517,17 @@ export default function ClusterMap({ inventory = [] }) {
     }));
   };
 
+  // Seçilen masa rengini optimistik günceller ve DB'ye kaydeder
+  async function handleColorChange(colorId) {
+    setTableColor(colorId);
+    await fetch("/api/inventory/use", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ itemId: colorId }),
+    });
+    router.refresh();
+  }
+
   return (
     <div
       className="relative w-full overflow-hidden border-[4px] border-g42-line shadow-[0_5px_0_var(--g42-line)]"
@@ -457,7 +542,11 @@ export default function ClusterMap({ inventory = [] }) {
         draggable={false}
       />
 
-      <TableGrid desks={desks} onDeskClick={handleDeskClick} />
+      <TableGrid
+        desks={desks}
+        onDeskClick={handleDeskClick}
+        tableColor={tableColor}
+      />
       <DecoGrid />
 
       {ownedIds.map((id) => {
@@ -475,6 +564,9 @@ export default function ClusterMap({ inventory = [] }) {
         onClose={() => setSelectedDesk(null)}
         onBuy={handleBuy}
         onUpgrade={handleUpgrade}
+        ownedTableIds={ownedTableIds}
+        currentTableColor={tableColor}
+        onColorChange={handleColorChange}
       />
     </div>
   );
