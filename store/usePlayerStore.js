@@ -1,9 +1,19 @@
 import { create } from "zustand";
 import {
-  getMultiplier, calcEarnings, calcUpgradeCost, calcClickPower,
-  calcComboMultiplier, calcComboDecayMs, calcPlayerLevel, xpForNextLevel,
-  xpProgressInLevel, XP_SOURCES, STREAK_MILESTONES, PC_MAX_LEVEL,
-  CLICK_WINDOW_MAX, CLICK_WINDOW_HOURS,
+  getMultiplier,
+  calcEarnings,
+  calcUpgradeCost,
+  calcClickPower,
+  calcComboMultiplier,
+  calcComboDecayMs,
+  calcPlayerLevel,
+  xpForNextLevel,
+  xpProgressInLevel,
+  XP_SOURCES,
+  STREAK_MILESTONES,
+  PC_MAX_LEVEL,
+  CLICK_WINDOW_MAX,
+  CLICK_WINDOW_HOURS,
 } from "@/lib/economy";
 
 const USE_MOCK = true;
@@ -82,7 +92,9 @@ const MOCK_PLAYER = {
   claimed_today: false,
   streak_frozen_until: null,
   last_claim_date: new Date(Date.now() - 86400000).toISOString().slice(0, 10), // yesterday
-  streak_started_at: new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10), // 3 days ago
+  streak_started_at: new Date(Date.now() - 3 * 86400000)
+    .toISOString()
+    .slice(0, 10), // 3 days ago
   weekly_coins: 1800,
   total_coins: 12000,
   streak_milestone_reached: 1, // en yüksek ulaşılan milestone index (0=hiç)
@@ -128,6 +140,7 @@ export const usePlayerStore = create((set, get) => ({
   combo_multiplier: 1,
   max_combo_xp_earned: false,
   _combo_reset_timer: null,
+  combo_shield_until: null,
   // Batch sync tracking
   _unsaved_click_coins: 0,
   _unsaved_click_xp: 0,
@@ -135,12 +148,21 @@ export const usePlayerStore = create((set, get) => ({
   _flush_timer: null,
 
   loadPlayer: async () => {
-    if (USE_MOCK) { get().setPlayer(MOCK_PLAYER); return; }
+    if (USE_MOCK) {
+      get().setPlayer(MOCK_PLAYER);
+      return;
+    }
     const { createBrowserClient } = await import("@/lib/supabase/client");
     const supabase = createBrowserClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
-    const { data } = await supabase.from("users").select("*").eq("id", user.id).single();
+    const { data } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", user.id)
+      .single();
     if (data) get().setPlayer(data);
   },
 
@@ -168,6 +190,9 @@ export const usePlayerStore = create((set, get) => ({
       click_locked_until: clickWindow.lockedUntil,
       click_window_started_at: clickWindow.startedAt,
       click_window_expires_at: clickWindow.expiresAt,
+      combo_shield_until: data.combo_shield_until
+        ? Date.parse(data.combo_shield_until)
+        : null,
     });
   },
 
@@ -196,7 +221,8 @@ export const usePlayerStore = create((set, get) => ({
         claimed_today: true,
         first_click_today: false,
         last_claim_date: today,
-        streak_started_at: MOCK_CLAIM_RESULT.newStreak === 1 ? today : s.streak_started_at,
+        streak_started_at:
+          MOCK_CLAIM_RESULT.newStreak === 1 ? today : s.streak_started_at,
       }));
       get().addXp(MOCK_CLAIM_RESULT.xpEarned);
       return MOCK_CLAIM_RESULT;
@@ -207,19 +233,24 @@ export const usePlayerStore = create((set, get) => ({
     if (!res.ok) return { error: data.error };
 
     const hour = new Date().getHours();
-    const timeXp = hour >= 8 && hour < 10 ? XP_SOURCES.early_bird
-                 : hour >= 22             ? XP_SOURCES.night_owl
-                 : 0;
+    const timeXp =
+      hour >= 8 && hour < 10
+        ? XP_SOURCES.early_bird
+        : hour >= 22
+          ? XP_SOURCES.night_owl
+          : 0;
 
     const newStreak = data.newStreak;
     const milestoneXp = STREAK_MILESTONES.reduce((acc, m, i) => {
       const alreadyClaimed = get().streak_milestone_reached > i;
-      return (!alreadyClaimed && newStreak >= m.days)
+      return !alreadyClaimed && newStreak >= m.days
         ? acc + XP_SOURCES[m.xp_key]
         : acc;
     }, 0);
-    const newMilestoneReached = STREAK_MILESTONES.reduce((acc, m, i) =>
-      newStreak >= m.days ? i + 1 : acc, get().streak_milestone_reached);
+    const newMilestoneReached = STREAK_MILESTONES.reduce(
+      (acc, m, i) => (newStreak >= m.days ? i + 1 : acc),
+      get().streak_milestone_reached,
+    );
 
     set((s) => ({
       balance: s.balance + data.coinsEarned,
@@ -231,17 +262,24 @@ export const usePlayerStore = create((set, get) => ({
       streak_milestone_reached: newMilestoneReached,
     }));
 
-    const totalXp = (data.xpEarned ?? XP_SOURCES.daily_claim) + timeXp + milestoneXp;
+    const totalXp =
+      (data.xpEarned ?? XP_SOURCES.daily_claim) + timeXp + milestoneXp;
     get().addXp(totalXp);
     return { ...data, xpEarned: totalXp };
   },
 
   clickCampus: () => {
     const {
-      streak_frozen_until, session_clicks, click_locked_until,
+      streak_frozen_until,
+      session_clicks,
+      click_locked_until,
       click_window_expires_at,
-      combo_count, _combo_reset_timer, xp, total_clicks,
-      max_combo_xp_earned, first_click_today,
+      combo_count,
+      _combo_reset_timer,
+      xp,
+      total_clicks,
+      max_combo_xp_earned,
+      first_click_today,
     } = get();
 
     const now = Date.now();
@@ -279,7 +317,8 @@ export const usePlayerStore = create((set, get) => ({
     let xpGained = 0;
     if (!first_click_today) xpGained += XP_SOURCES.first_daily_click;
     if (newTotalClicks % 500 === 0) xpGained += XP_SOURCES.click_milestone;
-    if (newCombo === 75 && !max_combo_xp_earned) xpGained += XP_SOURCES.max_combo;
+    if (newCombo === 75 && !max_combo_xp_earned)
+      xpGained += XP_SOURCES.max_combo;
 
     const isWindowFull = newSessionClicks >= CLICK_WINDOW_MAX;
     const windowStartedAt =
@@ -290,9 +329,20 @@ export const usePlayerStore = create((set, get) => ({
 
     if (_combo_reset_timer) clearTimeout(_combo_reset_timer);
     const decayMs = calcComboDecayMs(playerLevel);
-    const timer = setTimeout(() => {
-      set({ combo_count: 0, combo_multiplier: 1, _combo_reset_timer: null, max_combo_xp_earned: false });
-    }, decayMs);
+
+    // Combo Shield aktifse decay timer set edilmez
+    const shieldActive =
+      get().combo_shield_until && Date.now() < get().combo_shield_until;
+    const timer = shieldActive
+      ? null
+      : setTimeout(() => {
+          set({
+            combo_count: 0,
+            combo_multiplier: 1,
+            _combo_reset_timer: null,
+            max_combo_xp_earned: false,
+          });
+        }, decayMs);
 
     set((s) => ({
       balance: s.balance + earned,
@@ -323,7 +373,13 @@ export const usePlayerStore = create((set, get) => ({
       get()._scheduleFlush();
     }
 
-    return { earned, combo: newCombo, multiplier: comboMult, xpGained, locked: isWindowFull };
+    return {
+      earned,
+      combo: newCombo,
+      multiplier: comboMult,
+      xpGained,
+      locked: isWindowFull,
+    };
   },
 
   purchaseUpgrade: async () => {
@@ -332,7 +388,9 @@ export const usePlayerStore = create((set, get) => ({
     if (cost === null) return { error: "Maksimum seviyeye ulaşıldı" };
     if (balance < cost) return { error: "Yetersiz bakiye" };
 
-    const xpGained = XP_SOURCES.pc_upgrade + (!first_purchase_done ? XP_SOURCES.first_purchase : 0);
+    const xpGained =
+      XP_SOURCES.pc_upgrade +
+      (!first_purchase_done ? XP_SOURCES.first_purchase : 0);
 
     if (USE_MOCK) {
       set((s) => ({
@@ -386,9 +444,18 @@ export const usePlayerStore = create((set, get) => ({
       click_window_expires_at: clickWindow.expiresAt,
       click_window_started_at: clickWindow.startedAt,
       session_clicks: clickWindow.count,
-      total_clicks: typeof player.total_clicks === "number" ? player.total_clicks : s.total_clicks,
-      total_coins: typeof player.total_coins === "number" ? player.total_coins : s.total_coins,
-      weekly_coins: typeof player.weekly_coins === "number" ? player.weekly_coins : s.weekly_coins,
+      total_clicks:
+        typeof player.total_clicks === "number"
+          ? player.total_clicks
+          : s.total_clicks,
+      total_coins:
+        typeof player.total_coins === "number"
+          ? player.total_coins
+          : s.total_coins,
+      weekly_coins:
+        typeof player.weekly_coins === "number"
+          ? player.weekly_coins
+          : s.weekly_coins,
       xp: typeof player.xp === "number" ? player.xp : s.xp,
     }));
   },
@@ -433,10 +500,21 @@ export const usePlayerStore = create((set, get) => ({
   },
 
   flushClickEarnings: async () => {
-    const { _unsaved_click_coins, _unsaved_click_xp, _unsaved_click_count, _flush_timer, id } = get();
+    const {
+      _unsaved_click_coins,
+      _unsaved_click_xp,
+      _unsaved_click_count,
+      _flush_timer,
+      id,
+    } = get();
 
     // Nothing to flush
-    if (_unsaved_click_coins === 0 && _unsaved_click_xp === 0 && _unsaved_click_count === 0) return;
+    if (
+      _unsaved_click_coins === 0 &&
+      _unsaved_click_xp === 0 &&
+      _unsaved_click_count === 0
+    )
+      return;
 
     if (_flush_timer) clearTimeout(_flush_timer);
 
@@ -455,7 +533,9 @@ export const usePlayerStore = create((set, get) => ({
     // If user is not a real DB user (mock), just log — don't hit the API
     const isMockUser = !id || id === "mock-user-1";
     if (isMockUser) {
-      console.log(`[ClickSync] Flushed ${clicksToSync} clicks: +${coinsToSync.toFixed(1)} coins, +${xpToSync} XP (mock, not saved)`);
+      console.log(
+        `[ClickSync] Flushed ${clicksToSync} clicks: +${coinsToSync.toFixed(1)} coins, +${xpToSync} XP (mock, not saved)`,
+      );
       return;
     }
 

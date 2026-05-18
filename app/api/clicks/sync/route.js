@@ -37,7 +37,9 @@ function toClickWindow(data) {
  */
 export async function POST(request) {
   const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -60,7 +62,9 @@ export async function POST(request) {
   // Round coins since DB column is integer
   const safeCoins = Math.round(Math.max(0, Math.min(coins, 50000)));
   const safeXp = Math.round(Math.max(0, Math.min(xp ?? 0, 10000)));
-  const safeClicks = Math.round(Math.max(0, Math.min(clicks, CLICK_WINDOW_MAX)));
+  const safeClicks = Math.round(
+    Math.max(0, Math.min(clicks, CLICK_WINDOW_MAX)),
+  );
 
   let admin;
 
@@ -76,13 +80,24 @@ export async function POST(request) {
     );
   }
 
+  // Click Frenzy aktifse click window limitini bypass et
+  const { data: frenzyData } = await admin
+    .from("users")
+    .select("click_frenzy_until")
+    .eq("id", user.id)
+    .maybeSingle();
+  const frenzyActive =
+    frenzyData?.click_frenzy_until &&
+    new Date(frenzyData.click_frenzy_until) > new Date();
+  const effectiveWindowMax = frenzyActive ? 999999 : CLICK_WINDOW_MAX;
+
   const { data, error } = await admin
     .rpc("sync_click_window", {
       p_clicks: safeClicks,
       p_coins: safeCoins,
       p_user_id: user.id,
       p_window_hours: CLICK_WINDOW_HOURS,
-      p_window_max: CLICK_WINDOW_MAX,
+      p_window_max: effectiveWindowMax,
       p_xp: safeXp,
     })
     .single();
@@ -100,7 +115,7 @@ export async function POST(request) {
 
     return NextResponse.json(
       { error: "Sync başarısız", details: error.message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 

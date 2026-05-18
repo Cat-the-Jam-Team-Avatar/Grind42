@@ -6,7 +6,6 @@ import MarketItemVariant from "./MarketItemVariant";
 const CATEGORY_LABELS = {
   consumable: "Taktiksel Eşyalar",
   cosmetic: "Kozmetik & Prestij",
-  theme: "Masa Temaları",
 };
 
 // Kategori içindeki items listesini gruplara ayırır.
@@ -40,7 +39,7 @@ export default function MarketGrid({
   ownedIds,
   quantityById,
 }) {
-  const categories = ["consumable", "cosmetic", "theme"];
+  const categories = ["consumable", "cosmetic"];
 
   return (
     <div className="flex flex-col gap-5">

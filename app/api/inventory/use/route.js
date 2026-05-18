@@ -6,9 +6,9 @@ import { createServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const EQUIPPABLE_ITEM_IDS = MARKET_CATALOG
-  .filter((item) => item.category !== "consumable")
-  .map((item) => item.id);
+const EQUIPPABLE_ITEM_IDS = MARKET_CATALOG.filter(
+  (item) => item.category !== "consumable",
+).map((item) => item.id);
 
 const USE_ERROR_STATUS = {
   inventory_category_required: 400,
@@ -41,7 +41,8 @@ function isCosmeticLike(item) {
 function migrationRequiredResponse() {
   return NextResponse.json(
     {
-      error: "Kozmetik kullanım durumunu kaydetmek için envanter migration'ı gerekli",
+      error:
+        "Kozmetik kullanım durumunu kaydetmek için envanter migration'ı gerekli",
     },
     { status: 409 },
   );
@@ -190,7 +191,8 @@ async function applyWithDirectSchema(admin, userId, item) {
 
   if (actionResult.error) {
     const status =
-      isCosmeticLike(item) && isMissingInventoryUseSchemaError(actionResult.error)
+      isCosmeticLike(item) &&
+      isMissingInventoryUseSchemaError(actionResult.error)
         ? 409
         : 500;
 
@@ -202,6 +204,78 @@ async function applyWithDirectSchema(admin, userId, item) {
     error: null,
     status: 200,
   };
+}
+
+// Her tüketilebilir powerup item'ının DB efektini uygular.
+// Item'ın envanterden düşürüldüğü doğrulandıktan sonra çağrılır.
+async function applyConsumableEffect(admin, userId, itemId) {
+  if (itemId === "xp_bomb") {
+    // Anlık 500 XP ekle
+    const { data: player } = await admin
+      .from("users")
+      .select("xp")
+      .eq("id", userId)
+      .maybeSingle();
+    await admin
+      .from("users")
+      .update({ xp: (player?.xp ?? 0) + 500 })
+      .eq("id", userId);
+    return { effect: "xp_bomb", xpGained: 500 };
+  }
+
+  if (itemId === "espresso") {
+    // Sonraki claim'de logtime 2x sayılacak flag'i aç
+    await admin
+      .from("users")
+      .update({ espresso_active: true })
+      .eq("id", userId);
+    return { effect: "espresso" };
+  }
+
+  if (itemId === "freeze") {
+    // Sonraki claim'de 0 coin ama streak kırılmayacak
+    await admin.from("users").update({ freeze_active: true }).eq("id", userId);
+    return { effect: "freeze" };
+  }
+
+  if (itemId === "combo_shield") {
+    // 30 dakika boyunca combo decay yaşanmaz
+    const until = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    await admin
+      .from("users")
+      .update({ combo_shield_until: until })
+      .eq("id", userId);
+    return { effect: "combo_shield", activeUntil: until };
+  }
+
+  if (itemId === "click_frenzy") {
+    // 1 saat boyunca click window limiti kaldırılır
+    const until = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    await admin
+      .from("users")
+      .update({ click_frenzy_until: until })
+      .eq("id", userId);
+    return { effect: "click_frenzy", activeUntil: until };
+  }
+
+  if (itemId === "streak_restore") {
+    // Kırılmadan önceki streak değerini geri yükle
+    const { data: player } = await admin
+      .from("users")
+      .select("previous_streak")
+      .eq("id", userId)
+      .maybeSingle();
+    const prevStreak = player?.previous_streak ?? 0;
+    if (prevStreak > 0) {
+      await admin
+        .from("users")
+        .update({ current_streak: prevStreak, previous_streak: 0 })
+        .eq("id", userId);
+    }
+    return { effect: "streak_restore", restoredStreak: prevStreak };
+  }
+
+  return null;
 }
 
 async function fetchInventoryPayload(admin, userId) {
@@ -299,9 +373,20 @@ export async function POST(request) {
     );
   }
 
+  // Tüketim başarılıysa powerup efektini uygula
+  let effectResult = null;
+  if (result.data.consumed && item.category === "consumable") {
+    try {
+      effectResult = await applyConsumableEffect(admin, user.id, item.id);
+    } catch (err) {
+      console.error("[UseItem] Efekt uygulanamadı:", item.id, err);
+    }
+  }
+
   const inventory = await fetchInventoryPayload(admin, user.id);
 
   return NextResponse.json({
+    effect: effectResult,
     inventory,
     itemId: item.id,
     legacySchema,

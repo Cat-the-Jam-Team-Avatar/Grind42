@@ -56,10 +56,15 @@ function ErrorMessage({ message }) {
 }
 
 function SuccessContent({ result }) {
-  const { coinsEarned, logtimeDate, logtimeHours, multiplier, newStreak, xpEarned } = result;
+  const { coinsEarned, isOnlineInCluster, logtimeDate, logtimeHours, multiplier, newStreak, xpEarned } = result;
 
   return (
     <div className="flex flex-col gap-4">
+      {isOnlineInCluster === false && (
+        <p className="nes-text is-warning text-xs text-center leading-loose">
+          ⚠️ Cluster&apos;da online değilsin — 0.3x ceza çarpanı uygulandı ve streak sıfırlandı.
+        </p>
+      )}
       <div className={`grid gap-[10px] max-[560px]:grid-cols-1 ${xpEarned > 0 ? "grid-cols-4" : "grid-cols-3"}`}>
         <InfoCard label="Tarih" value={logtimeDate} />
         <InfoCard label="Süre" value={`${formatClaimHours(logtimeHours)}s`} />
