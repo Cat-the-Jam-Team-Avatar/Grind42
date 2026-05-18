@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import PixelSprite from "@/components/ui/PixelSprite";
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -138,48 +139,70 @@ function DecoGrid() {
 
 /* ── Masa + bilgisayar grid'i ── */
 
-function TableGrid() {
+function TableGrid({ desks, onDeskClick }) {
   return (
     <>
       {ROW_Y.map((y) =>
-        COL_X.map((x) => (
-          <div
-            key={`${x}-${y}`}
-            style={{
-              position: "absolute",
-              left: `${x}%`,
-              top: `${y}%`,
-              transform: "translate(-50%, -50%)",
-              width: TABLE_W,
-              zIndex: Math.floor(y) + 1,
-            }}
-          >
-            {/* Masa */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/cluster/table/white_table.png"
-              alt=""
-              aria-hidden="true"
-              draggable={false}
-              style={{ display: "block", width: "100%", imageRendering: "pixelated" }}
-            />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/computer/computerone.png"
-              alt=""
-              aria-hidden="true"
-              draggable={false}
+        COL_X.map((x) => {
+          const deskId = `${x}-${y}`;
+          const deskData = desks[deskId] || { hasComputer: false, level: 0 };
+          return (
+            <div
+              key={deskId}
               style={{
                 position: "absolute",
-                top: "-30%",
-                left: "50%",
-                transform: "translateX(-50%)",
-                width: "55%",
-                imageRendering: "pixelated",
+                left: `${x}%`,
+                top: `${y}%`,
+                transform: "translate(-50%, -50%)",
+                width: TABLE_W,
+                zIndex: Math.floor(y) + 1,
               }}
-            />
-          </div>
-        )),
+            >
+              <motion.button
+                onClick={() => onDeskClick(deskId, deskData)}
+                whileHover={{ scale: 1.1, filter: "brightness(1.2)" }}
+                whileTap={{ scale: 0.95 }}
+                style={{
+                  width: "100%",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                  outline: "none",
+                  display: "block",
+                }}
+              >
+                {/* Masa */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/cluster/table/white_table.png"
+                  alt=""
+                  aria-hidden="true"
+                  draggable={false}
+                  style={{ display: "block", width: "100%", imageRendering: "pixelated" }}
+                />
+                {/* Bilgisayar (Eğer varsa) */}
+                {deskData.hasComputer && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src="/computer/computerone.png"
+                    alt=""
+                    aria-hidden="true"
+                    draggable={false}
+                    style={{
+                      position: "absolute",
+                      top: "-30%",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      width: "55%",
+                      imageRendering: "pixelated",
+                    }}
+                  />
+                )}
+              </motion.button>
+            </div>
+          );
+        }),
       )}
     </>
   );
@@ -292,10 +315,99 @@ function MapItem({ itemId, pos }) {
   );
 }
 
+/* ── Desk Modal ── */
+
+function DeskActionModal({ isOpen, deskId, deskData, onClose, onBuy, onUpgrade }) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ scale: 0.8, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.8, y: 20, opacity: 0 }}
+            transition={{ type: "spring", bounce: 0.5 }}
+            className="nes-container is-rounded is-dark flex flex-col items-center gap-6 p-6 max-w-sm w-full mx-4 relative bg-[#212529]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={onClose}
+              className="absolute top-2 right-4 text-g42-gray hover:text-white transition-colors"
+            >
+              x
+            </button>
+            <h2 className="text-xl text-center">
+              {deskData?.hasComputer ? "Bilgisayarı Yükselt" : "Bilgisayar Al"}
+            </h2>
+            <div className="flex justify-center w-full my-2">
+               {deskData?.hasComputer ? (
+                 /* eslint-disable-next-line @next/next/no-img-element */
+                 <img src="/computer/computerone.png" alt="Computer" style={{ width: "64px", imageRendering: "pixelated" }} />
+               ) : (
+                 <PixelSprite name="chair" scale={3} />
+               )}
+            </div>
+            {deskData?.hasComputer ? (
+              <div className="text-center text-sm mb-2 text-g42-gray">
+                <p>Mevcut Seviye: {deskData.level}</p>
+                <p>Sonraki Seviye: {deskData.level + 1}</p>
+              </div>
+            ) : (
+              <p className="text-center text-sm mb-2 text-g42-gray">
+                Bu masa boş görünüyor. Buraya bir bilgisayar kurarak logtime kazanmaya başlayabilirsin!
+              </p>
+            )}
+            
+            <button
+              type="button"
+              className={`nes-btn w-full ${deskData?.hasComputer ? 'is-warning' : 'is-success'}`}
+              onClick={() => {
+                deskData?.hasComputer ? onUpgrade(deskId) : onBuy(deskId);
+                onClose();
+              }}
+            >
+              {deskData?.hasComputer ? "Yükselt" : "Satın Al"}
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 /* ── Ana bileşen ── */
 
 export default function ClusterMap({ inventory = [] }) {
   const ownedIds = normalizeInventory(inventory);
+  
+  // Mock State for Desks
+  const [desks, setDesks] = useState({
+    "12.5-37": { hasComputer: true, level: 1 },
+    "25.5-52": { hasComputer: true, level: 3 },
+  });
+
+  const [selectedDesk, setSelectedDesk] = useState(null);
+
+  const handleDeskClick = (deskId, deskData) => {
+    setSelectedDesk({ id: deskId, data: deskData });
+  };
+
+  const handleBuy = (deskId) => {
+    setDesks((prev) => ({ ...prev, [deskId]: { hasComputer: true, level: 1 } }));
+  };
+
+  const handleUpgrade = (deskId) => {
+    setDesks((prev) => ({
+      ...prev,
+      [deskId]: { ...prev[deskId], level: prev[deskId].level + 1 }
+    }));
+  };
 
   return (
     <div
@@ -311,7 +423,7 @@ export default function ClusterMap({ inventory = [] }) {
         draggable={false}
       />
 
-      <TableGrid />
+      <TableGrid desks={desks} onDeskClick={handleDeskClick} />
       <DecoGrid />
 
       {ownedIds.map((id) => {
@@ -321,6 +433,15 @@ export default function ClusterMap({ inventory = [] }) {
       })}
 
       <Character />
+      
+      <DeskActionModal 
+        isOpen={!!selectedDesk} 
+        deskId={selectedDesk?.id}
+        deskData={selectedDesk?.data}
+        onClose={() => setSelectedDesk(null)}
+        onBuy={handleBuy}
+        onUpgrade={handleUpgrade}
+      />
     </div>
   );
 }
