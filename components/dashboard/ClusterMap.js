@@ -486,11 +486,18 @@ export default function ClusterMap({ inventory = [] }) {
   const ownedTableIds = ownedIds.filter((id) => TABLE_IMAGE_MAP[id]);
 
   // Sayfa yüklendiğinde DB'deki equipped rengi bul, başlangıç değeri olarak kullan
-  const initialTableColor =
+  const equippedColor =
     (inventory ?? []).find(
       (item) => TABLE_IMAGE_MAP[item?.id] && item?.is_equipped,
     )?.id ?? null;
-  const [tableColor, setTableColor] = useState(initialTableColor);
+  const [tableColor, setTableColor] = useState(equippedColor);
+
+  // router.refresh() sonrası DB'den gelen rengi state'e yansıt
+  useEffect(() => {
+    if (equippedColor !== null) {
+      setTableColor(equippedColor);
+    }
+  }, [equippedColor]);
 
   // Mock State for Desks
   const [desks, setDesks] = useState({
@@ -520,12 +527,21 @@ export default function ClusterMap({ inventory = [] }) {
 
   // Seçilen masa rengini optimistik günceller ve DB'ye kaydeder
   async function handleColorChange(colorId) {
-    setTableColor(colorId);
-    await fetch("/api/inventory/use", {
+    const previousColor = tableColor; // hata olursa geri almak için eski rengi sakla
+    setTableColor(colorId); // optimistik güncelleme
+
+    const res = await fetch("/api/inventory/use", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ itemId: colorId }),
     });
+
+    if (!res.ok) {
+      // Kayıt başarısız → eski renge geri dön
+      setTableColor(previousColor);
+      return;
+    }
+
     router.refresh();
   }
 
