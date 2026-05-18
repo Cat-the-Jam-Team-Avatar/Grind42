@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import PixelSprite from "@/components/ui/PixelSprite";
+import { MARKET_CATALOG } from "@/lib/economy";
 
 /* ──────────────────────────────────────────────────────────────────────────
    Koordinat sistemi (container'ın %'si)
@@ -118,28 +119,212 @@ const DECO_POSITIONS = [
   { id: "g6", x: 82, y: 80 },
 ];
 
-function DecoGrid() {
+// MARKET_CATALOG'dan deco pozisyonuna yerleştirilebilecek kozmetikleri çıkar
+const DECO_CATALOG = MARKET_CATALOG.filter(
+  (item) => item.category === "cosmetic" && item.variantOf !== "table",
+);
+
+// item_id → katalog item eşleştirmesi (hızlı arama için)
+const DECO_CATALOG_MAP = new Map(DECO_CATALOG.map((item) => [item.id, item]));
+
+/* ── Bir deco item'ın önizleme görselini render eder ──
+   Katalogda `image` varsa <img>, `sprite` varsa <PixelSprite> kullanılır.
+────────────────────────────────────────────────────────────────────────── */
+function DecoItemPreview({ itemId, size = 32 }) {
+  const catalogItem = DECO_CATALOG_MAP.get(itemId);
+  if (!catalogItem) return null;
+
+  if (catalogItem.image) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={catalogItem.image}
+        alt={catalogItem.name}
+        draggable={false}
+        style={{
+          width: size,
+          height: size,
+          imageRendering: "pixelated",
+          objectFit: "contain",
+        }}
+      />
+    );
+  }
+
+  if (catalogItem.sprite) {
+    return <PixelSprite name={catalogItem.sprite} scale={2} />;
+  }
+
+  return null;
+}
+
+/* ── Deco grid: tıklanabilir nokta butonları ──
+   Yerleştirilmiş item varsa önizlemesini gösterir, yoksa "+" işareti.
+────────────────────────────────────────────────────────────────────────── */
+function DecoGrid({ decoState, onDecoClick }) {
   return (
     <>
-      {DECO_POSITIONS.map(({ id, x, y }) => (
-        <div
-          key={id}
-          title={id}
-          style={{
-            position: "absolute",
-            left: `${x}%`,
-            top: `${y}%`,
-            transform: "translate(-50%, -50%)",
-            zIndex: Math.floor(y) + 3,
-            width: 14,
-            height: 14,
-            background: "#f5c842",
-            border: "2px solid #8a6d00",
-            imageRendering: "pixelated",
-          }}
-        />
-      ))}
+      {DECO_POSITIONS.map(({ id, x, y }) => {
+        const placedItemId = decoState[id];
+        const catalogItem = placedItemId
+          ? DECO_CATALOG_MAP.get(placedItemId)
+          : null;
+
+        return (
+          // Wrapper: konum + ortalama — motion transform'u ezmesin
+          <div
+            key={id}
+            style={{
+              position: "absolute",
+              left: `${x}%`,
+              top: `${y}%`,
+              transform: "translate(-50%, -50%)",
+              zIndex: Math.floor(y) + 3,
+            }}
+          >
+            <motion.button
+              onClick={() => onDecoClick(id)}
+              whileHover={{ scale: 1.2, filter: "brightness(1.3)" }}
+              whileTap={{ scale: 0.9 }}
+              title={placedItemId ? catalogItem?.name : "Dekorasyon ekle"}
+              style={{
+                width: 28,
+                height: 28,
+                background: placedItemId ? "transparent" : "rgba(0,0,0,0.45)",
+                border: placedItemId
+                  ? "none"
+                  : "2px dashed rgba(255,255,255,0.4)",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 0,
+                outline: "none",
+                imageRendering: "pixelated",
+              }}
+            >
+              {placedItemId ? (
+                <DecoItemPreview itemId={placedItemId} size={26} />
+              ) : (
+                <span
+                  style={{
+                    color: "rgba(255,255,255,0.5)",
+                    fontSize: 14,
+                    lineHeight: 1,
+                  }}
+                >
+                  +
+                </span>
+              )}
+            </motion.button>
+          </div>
+        );
+      })}
     </>
+  );
+}
+
+/* ── Deco Picker Modal ──
+   Envanterdeki deco-yerleştirilebilir kozmetikleri listeler.
+   Bir item seçilince o pozisyona yerleştirilir.
+   Pozisyonda zaten item varsa "Kaldır" butonu görünür.
+────────────────────────────────────────────────────────────────────────── */
+function DecoPickerModal({
+  isOpen,
+  positionId,
+  currentItemId,
+  ownedDecoIds,
+  decoState,
+  onClose,
+  onPick,
+  onRemove,
+}) {
+  // Başka pozisyonlarda zaten kullanılan item ID'leri (mevcut pozisyon hariç)
+  const usedElsewhere = new Set(
+    Object.entries(decoState ?? {})
+      .filter(([pos]) => pos !== positionId)
+      .map(([, itemId]) => itemId),
+  );
+
+  // Envanterdeki, kullanılabilir (başka yerde takılı olmayan) item'lar
+  const availableItems = DECO_CATALOG.filter(
+    (item) => ownedDecoIds.includes(item.id) && !usedElsewhere.has(item.id),
+  );
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ scale: 0.8, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.8, y: 20, opacity: 0 }}
+            transition={{ type: "spring", bounce: 0.5 }}
+            className="nes-container is-rounded is-dark flex flex-col gap-4 p-6 max-w-sm w-full mx-4 relative bg-[#212529]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={onClose}
+              className="absolute top-2 right-4 text-g42-gray hover:text-white transition-colors"
+            >
+              x
+            </button>
+
+            <h2 className="text-lg text-center">Dekorasyon Seç</h2>
+            <p className="text-xs text-g42-gray text-center -mt-2">
+              Pozisyon: <span className="text-white">{positionId}</span>
+            </p>
+
+            {availableItems.length === 0 ? (
+              <p className="text-center text-sm text-g42-gray py-4">
+                Envanterinde yerleştirilebilir kozmetik yok.
+              </p>
+            ) : (
+              <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+                {availableItems.map((item) => {
+                  const isActive = currentItemId === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      title={item.name}
+                      onClick={() => onPick(item.id)}
+                      className={`flex flex-col items-center gap-1 p-2 border-[2px] transition-none ${
+                        isActive
+                          ? "border-white bg-white/10"
+                          : "border-transparent hover:border-g42-gray"
+                      }`}
+                    >
+                      <DecoItemPreview itemId={item.id} size={32} />
+                      <span className="text-[8px] text-g42-gray leading-none text-center truncate w-full">
+                        {item.variantLabel ?? item.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Pozisyonda zaten bir item varsa "Kaldır" butonu görünsün */}
+            {currentItemId && (
+              <button
+                type="button"
+                className="nes-btn is-error w-full text-sm"
+                onClick={onRemove}
+              >
+                Kaldır
+              </button>
+            )}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -479,11 +664,13 @@ function DeskActionModal({
 
 /* ── Ana bileşen ── */
 
-export default function ClusterMap({ inventory = [] }) {
+export default function ClusterMap({ inventory = [], decoplacements = {} }) {
   const router = useRouter();
   const ownedIds = normalizeInventory(inventory);
   // Envanterdeki masa renk varyasyonlarını filtrele
   const ownedTableIds = ownedIds.filter((id) => TABLE_IMAGE_MAP[id]);
+  // Envanterdeki deco-yerleştirilebilir kozmetik ID'leri
+  const ownedDecoIds = ownedIds.filter((id) => DECO_CATALOG_MAP.has(id));
 
   // Sayfa yüklendiğinde DB'deki equipped rengi bul, başlangıç değeri olarak kullan
   const equippedColor =
@@ -498,6 +685,15 @@ export default function ClusterMap({ inventory = [] }) {
       setTableColor(equippedColor);
     }
   }, [equippedColor]);
+
+  // Deco yerleştirme state'i — prop'tan başlat, prop değişince güncelle
+  const [decoState, setDecoState] = useState(decoplacements ?? {});
+  useEffect(() => {
+    setDecoState(decoplacements ?? {});
+  }, [decoplacements]);
+
+  // Seçili deco pozisyonu (modal için)
+  const [selectedDecoPos, setSelectedDecoPos] = useState(null);
 
   // Mock State for Desks
   const [desks, setDesks] = useState({
@@ -524,6 +720,31 @@ export default function ClusterMap({ inventory = [] }) {
       [deskId]: { ...prev[deskId], level: prev[deskId].level + 1 },
     }));
   };
+
+  // Deco pozisyonuna item yerleştirir veya kaldırır (optimistik)
+  async function handleDecoPick(positionId, itemId) {
+    const previousState = decoState;
+    // Optimistik güncelleme
+    const newState = { ...decoState };
+    if (itemId != null) {
+      newState[positionId] = itemId;
+    } else {
+      delete newState[positionId];
+    }
+    setDecoState(newState);
+    setSelectedDecoPos(null);
+
+    const res = await fetch("/api/inventory/deco", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ positionId, itemId: itemId ?? null }),
+    });
+
+    if (!res.ok) {
+      // Hata durumunda eski state'e geri dön
+      setDecoState(previousState);
+    }
+  }
 
   // Seçilen masa rengini optimistik günceller ve DB'ye kaydeder
   async function handleColorChange(colorId) {
@@ -564,7 +785,10 @@ export default function ClusterMap({ inventory = [] }) {
         onDeskClick={handleDeskClick}
         tableColor={tableColor}
       />
-      <DecoGrid />
+      <DecoGrid
+        decoState={decoState}
+        onDecoClick={(posId) => setSelectedDecoPos(posId)}
+      />
 
       {ownedIds.map((id) => {
         const pos = ITEM_POSITIONS[id];
@@ -584,6 +808,18 @@ export default function ClusterMap({ inventory = [] }) {
         ownedTableIds={ownedTableIds}
         currentTableColor={tableColor}
         onColorChange={handleColorChange}
+      />
+
+      {/* Deco pozisyonu seçici modal */}
+      <DecoPickerModal
+        isOpen={!!selectedDecoPos}
+        positionId={selectedDecoPos}
+        currentItemId={selectedDecoPos ? decoState[selectedDecoPos] : null}
+        ownedDecoIds={ownedDecoIds}
+        decoState={decoState}
+        onClose={() => setSelectedDecoPos(null)}
+        onPick={(itemId) => handleDecoPick(selectedDecoPos, itemId)}
+        onRemove={() => handleDecoPick(selectedDecoPos, null)}
       />
     </div>
   );
