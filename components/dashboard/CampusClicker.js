@@ -286,7 +286,7 @@ export default function CampusClicker() {
       const result = clickCampus();
       if (!result || result.frozen || result.locked) return;
 
-      if (clickSoundRef.current) {
+      if (clickSoundRef.current && localStorage.getItem("g42_bg_muted") !== "true") {
         clickSoundRef.current.currentTime = 0;
         clickSoundRef.current.play().catch(() => {});
       }
