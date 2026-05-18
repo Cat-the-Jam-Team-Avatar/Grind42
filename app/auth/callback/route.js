@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import {
   buildFortyTwoProfilePatch,
+  fetchFortyTwoPrimaryCoalition,
   fetchFortyTwoProfile,
   getFortyTwoLogin,
 } from "@/lib/auth/forty-two";
@@ -39,14 +40,21 @@ function isOptionalProfileColumnError(error) {
   return (
     error?.code === "PGRST204" ||
     error?.message?.includes("forty_two_profile") ||
-    error?.message?.includes("forty_two_id")
+    error?.message?.includes("forty_two_id") ||
+    error?.message?.includes("coalition_")
   );
 }
 
-async function upsertPlayerProfile(supabase, user, intraLogin, fortyTwoProfile) {
+async function upsertPlayerProfile(
+  supabase,
+  user,
+  intraLogin,
+  fortyTwoProfile,
+  primaryCoalition
+) {
   const basePayload = { id: user.id, intra_login: intraLogin };
 
-  if (!fortyTwoProfile) {
+  if (!fortyTwoProfile && primaryCoalition === undefined) {
     return supabase
       .from("users")
       .upsert(basePayload, { onConflict: "id" });
@@ -54,7 +62,7 @@ async function upsertPlayerProfile(supabase, user, intraLogin, fortyTwoProfile) 
 
   const payload = {
     ...basePayload,
-    ...buildFortyTwoProfilePatch(fortyTwoProfile),
+    ...buildFortyTwoProfilePatch(fortyTwoProfile, primaryCoalition),
   };
 
   const result = await supabase
@@ -112,6 +120,7 @@ export async function GET(request) {
   }
 
   let fortyTwoProfile = null;
+  let primaryCoalition;
 
   try {
     fortyTwoProfile = await fetchFortyTwoProfile(data?.session?.provider_token);
@@ -119,11 +128,21 @@ export async function GET(request) {
     console.error("42 profile fetch failed", error);
   }
 
+  try {
+    primaryCoalition = await fetchFortyTwoPrimaryCoalition(
+      intraLogin,
+      fortyTwoProfile
+    );
+  } catch (error) {
+    console.error("42 coalition fetch failed", error);
+  }
+
   const { error: profileError } = await upsertPlayerProfile(
     supabase,
     user,
     intraLogin,
-    fortyTwoProfile
+    fortyTwoProfile,
+    primaryCoalition
   );
 
   if (profileError) {

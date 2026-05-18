@@ -11,6 +11,13 @@ create table if not exists users (
   campus_id       bigint,
   campus_name     text,
   campus_time_zone text,
+  coalition_id    bigint,
+  coalition_name  text,
+  coalition_slug  text,
+  coalition_color text,
+  coalition_image_url text,
+  coalition_cover_url text,
+  coalition_synced_at timestamptz,
   correction_point integer,
   cursus_grade    text,
   cursus_id       bigint,
@@ -57,6 +64,13 @@ alter table users
   add column if not exists campus_id bigint,
   add column if not exists campus_name text,
   add column if not exists campus_time_zone text,
+  add column if not exists coalition_id bigint,
+  add column if not exists coalition_name text,
+  add column if not exists coalition_slug text,
+  add column if not exists coalition_color text,
+  add column if not exists coalition_image_url text,
+  add column if not exists coalition_cover_url text,
+  add column if not exists coalition_synced_at timestamptz,
   add column if not exists correction_point integer,
   add column if not exists cursus_grade text,
   add column if not exists cursus_id bigint,
@@ -96,6 +110,10 @@ $$;
 create unique index if not exists users_forty_two_id_key
   on users(forty_two_id)
   where forty_two_id is not null;
+
+create index if not exists users_coalition_slug_idx
+  on users(coalition_slug)
+  where coalition_slug is not null;
 
 -- ─── Inventory ───────────────────────────────────────────────────────────────
 create table if not exists inventory (
@@ -160,6 +178,16 @@ revoke update (
   click_window_count,
   click_window_started_at,
   click_window_expires_at
+) on table users from anon, authenticated;
+
+revoke update (
+  coalition_id,
+  coalition_name,
+  coalition_slug,
+  coalition_color,
+  coalition_image_url,
+  coalition_cover_url,
+  coalition_synced_at
 ) on table users from anon, authenticated;
 
 grant select on table inventory to authenticated;
