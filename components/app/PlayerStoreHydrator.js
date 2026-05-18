@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePlayerStore } from "@/store/usePlayerStore";
+import {
+  isExpiredClickWindowData,
+  usePlayerStore,
+} from "@/store/usePlayerStore";
 
 /**
  * Invisible client component that hydrates the Zustand player store
@@ -11,7 +14,13 @@ import { usePlayerStore } from "@/store/usePlayerStore";
 export default function PlayerStoreHydrator({ player }) {
   useEffect(() => {
     if (player) {
-      usePlayerStore.getState().setPlayer(player);
+      const store = usePlayerStore.getState();
+
+      store.setPlayer(player);
+
+      if (isExpiredClickWindowData(player)) {
+        store.syncClickWindowState();
+      }
     }
   }, [player]);
 

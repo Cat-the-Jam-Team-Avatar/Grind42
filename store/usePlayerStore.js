@@ -11,6 +11,65 @@ const USE_MOCK = true;
 // ── Batch sync config ─────────────────────────────────────────────────────
 const FLUSH_DEBOUNCE_MS = 3000; // Wait 3s of inactivity before syncing to DB
 
+function toTimestamp(value) {
+  if (value == null) return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function clampClickWindowCount(value) {
+  return Math.max(0, Math.min(Number(value) || 0, CLICK_WINDOW_MAX));
+}
+
+function normalizeClickWindow(count, startedAt, expiresAt, now = Date.now()) {
+  const expiresAtMs = toTimestamp(expiresAt);
+  const startedAtMs = toTimestamp(startedAt);
+  const safeCount = clampClickWindowCount(count);
+
+  if (expiresAtMs !== null && expiresAtMs <= now) {
+    return {
+      count: 0,
+      expiresAt: null,
+      lockedUntil: null,
+      startedAt: null,
+    };
+  }
+
+  return {
+    count: safeCount,
+    expiresAt: expiresAtMs,
+    lockedUntil: safeCount >= CLICK_WINDOW_MAX ? expiresAtMs : null,
+    startedAt: startedAtMs,
+  };
+}
+
+function normalizePlayerClickWindow(data, now = Date.now()) {
+  return normalizeClickWindow(
+    data?.click_window_count,
+    data?.click_window_started_at,
+    data?.click_window_expires_at,
+    now,
+  );
+}
+
+function normalizeApiClickWindow(data, now = Date.now()) {
+  return normalizeClickWindow(
+    data?.count,
+    data?.startedAt,
+    data?.expiresAt,
+    now,
+  );
+}
+
+export function isExpiredClickWindowData(data, now = Date.now()) {
+  const count = clampClickWindowCount(data?.click_window_count);
+  const expiresAt = toTimestamp(data?.click_window_expires_at);
+
+  return count > 0 && expiresAt !== null && expiresAt <= now;
+}
+
 const MOCK_PLAYER = {
   id: "mock-user-1",
   intra_login: "jdoe",
@@ -28,6 +87,9 @@ const MOCK_PLAYER = {
   total_coins: 12000,
   streak_milestone_reached: 1, // en yüksek ulaşılan milestone index (0=hiç)
   first_purchase_done: false,
+  click_window_count: 0,
+  click_window_started_at: null,
+  click_window_expires_at: null,
 };
 
 const MOCK_CLAIM_RESULT = {
@@ -58,6 +120,8 @@ export const usePlayerStore = create((set, get) => ({
   // click window
   session_clicks: 0,
   click_locked_until: null,
+  click_window_started_at: null,
+  click_window_expires_at: null,
   first_click_today: false,
   // combo
   combo_count: 0,
@@ -80,7 +144,9 @@ export const usePlayerStore = create((set, get) => ({
     if (data) get().setPlayer(data);
   },
 
-  setPlayer: (data) =>
+  setPlayer: (data) => {
+    const clickWindow = normalizePlayerClickWindow(data);
+
     set({
       id: data.id,
       intra_login: data.intra_login,
@@ -98,7 +164,12 @@ export const usePlayerStore = create((set, get) => ({
       first_purchase_done: data.first_purchase_done ?? false,
       last_claim_date: data.last_claim_date ?? null,
       streak_started_at: data.streak_started_at ?? null,
-    }),
+      session_clicks: clickWindow.count,
+      click_locked_until: clickWindow.lockedUntil,
+      click_window_started_at: clickWindow.startedAt,
+      click_window_expires_at: clickWindow.expiresAt,
+    });
+  },
 
   // XP ekle + level atlama hediyesini otomatik ver
   addXp: (amount) => {
@@ -168,6 +239,7 @@ export const usePlayerStore = create((set, get) => ({
   clickCampus: () => {
     const {
       streak_frozen_until, session_clicks, click_locked_until,
+      click_window_expires_at,
       combo_count, _combo_reset_timer, xp, total_clicks,
       max_combo_xp_earned, first_click_today,
     } = get();
@@ -178,14 +250,30 @@ export const usePlayerStore = create((set, get) => ({
     if (streak_frozen_until && streak_frozen_until >= today)
       return { frozen: true, earned: 0 };
 
-    if (click_locked_until && now < click_locked_until)
-      return { locked: true, earned: 0, unlocksAt: click_locked_until };
+    let activeSessionClicks = session_clicks;
+    let activeWindowExpiresAt = click_window_expires_at;
+    let activeClickLockedUntil = click_locked_until;
+
+    if (activeWindowExpiresAt && now >= activeWindowExpiresAt) {
+      activeSessionClicks = 0;
+      activeWindowExpiresAt = null;
+      activeClickLockedUntil = null;
+      set({
+        click_locked_until: null,
+        click_window_expires_at: null,
+        click_window_started_at: null,
+        session_clicks: 0,
+      });
+    }
+
+    if (activeClickLockedUntil && now < activeClickLockedUntil)
+      return { locked: true, earned: 0, unlocksAt: activeClickLockedUntil };
 
     const playerLevel = calcPlayerLevel(xp);
     const newCombo = combo_count + 1;
     const comboMult = calcComboMultiplier(newCombo);
     const earned = calcClickPower(playerLevel) * comboMult;
-    const newSessionClicks = session_clicks + 1;
+    const newSessionClicks = activeSessionClicks + 1;
     const newTotalClicks = total_clicks + 1;
 
     let xpGained = 0;
@@ -194,7 +282,11 @@ export const usePlayerStore = create((set, get) => ({
     if (newCombo === 75 && !max_combo_xp_earned) xpGained += XP_SOURCES.max_combo;
 
     const isWindowFull = newSessionClicks >= CLICK_WINDOW_MAX;
-    const lockUntil = isWindowFull ? now + CLICK_WINDOW_HOURS * 60 * 60 * 1000 : null;
+    const windowStartedAt =
+      activeSessionClicks === 0 ? now : get().click_window_started_at;
+    const windowExpiresAt =
+      activeWindowExpiresAt ?? now + CLICK_WINDOW_HOURS * 60 * 60 * 1000;
+    const lockUntil = isWindowFull ? windowExpiresAt : null;
 
     if (_combo_reset_timer) clearTimeout(_combo_reset_timer);
     const decayMs = calcComboDecayMs(playerLevel);
@@ -207,8 +299,10 @@ export const usePlayerStore = create((set, get) => ({
       total_coins: s.total_coins + earned,
       weekly_coins: s.weekly_coins + earned,
       total_clicks: newTotalClicks,
-      session_clicks: isWindowFull ? 0 : newSessionClicks,
+      session_clicks: Math.min(newSessionClicks, CLICK_WINDOW_MAX),
       click_locked_until: lockUntil,
+      click_window_started_at: windowStartedAt,
+      click_window_expires_at: windowExpiresAt,
       first_click_today: true,
       combo_count: newCombo,
       combo_multiplier: comboMult,
@@ -280,11 +374,69 @@ export const usePlayerStore = create((set, get) => ({
     set({ _flush_timer: timer });
   },
 
+  applyClickSyncResult: (data) => {
+    if (!data) return;
+
+    const clickWindow = normalizeApiClickWindow(data.clickWindow);
+    const player = data.player ?? {};
+
+    set((s) => ({
+      balance: typeof player.balance === "number" ? player.balance : s.balance,
+      click_locked_until: clickWindow.lockedUntil,
+      click_window_expires_at: clickWindow.expiresAt,
+      click_window_started_at: clickWindow.startedAt,
+      session_clicks: clickWindow.count,
+      total_clicks: typeof player.total_clicks === "number" ? player.total_clicks : s.total_clicks,
+      total_coins: typeof player.total_coins === "number" ? player.total_coins : s.total_coins,
+      weekly_coins: typeof player.weekly_coins === "number" ? player.weekly_coins : s.weekly_coins,
+      xp: typeof player.xp === "number" ? player.xp : s.xp,
+    }));
+  },
+
+  syncClickWindowState: async () => {
+    const { id } = get();
+    const isMockUser = !id || id === "mock-user-1";
+
+    if (isMockUser) return;
+
+    try {
+      const res = await fetch("/api/clicks/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ coins: 0, xp: 0, clicks: 0 }),
+      });
+      const data = await res.json().catch(() => null);
+
+      if (res.ok) get().applyClickSyncResult(data);
+    } catch (err) {
+      console.error("[ClickSync] Failed to normalize click window:", err);
+    }
+  },
+
+  resetExpiredClickWindow: () => {
+    const { click_window_expires_at, session_clicks } = get();
+
+    if (!click_window_expires_at || Date.now() < click_window_expires_at) {
+      return false;
+    }
+
+    set({
+      click_locked_until: null,
+      click_window_expires_at: null,
+      click_window_started_at: null,
+      session_clicks: 0,
+    });
+
+    if (session_clicks > 0) get().syncClickWindowState();
+
+    return true;
+  },
+
   flushClickEarnings: async () => {
     const { _unsaved_click_coins, _unsaved_click_xp, _unsaved_click_count, _flush_timer, id } = get();
 
     // Nothing to flush
-    if (_unsaved_click_coins === 0 && _unsaved_click_xp === 0) return;
+    if (_unsaved_click_coins === 0 && _unsaved_click_xp === 0 && _unsaved_click_count === 0) return;
 
     if (_flush_timer) clearTimeout(_flush_timer);
 
@@ -309,7 +461,7 @@ export const usePlayerStore = create((set, get) => ({
 
     // Real sync to database
     try {
-      await fetch("/api/clicks/sync", {
+      const res = await fetch("/api/clicks/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -318,6 +470,13 @@ export const usePlayerStore = create((set, get) => ({
           clicks: clicksToSync,
         }),
       });
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(data?.error ?? "Click sync failed");
+      }
+
+      get().applyClickSyncResult(data);
     } catch (err) {
       // On failure, add the unsaved amounts back so they'll be retried
       console.error("[ClickSync] Failed to sync, will retry:", err);

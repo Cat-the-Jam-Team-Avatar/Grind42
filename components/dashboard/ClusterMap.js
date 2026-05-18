@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import PixelSprite from "@/components/ui/PixelSprite";
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -155,6 +155,7 @@ function TableGrid() {
             }}
           >
             {/* Masa */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/cluster/table/white_table.png"
               alt=""
@@ -192,43 +193,47 @@ function TableGrid() {
 ────────────────────────────────────────────────────────────────────────── */
 
 function Character() {
-  const initStopId = useRef(STOP_IDS[Math.floor(Math.random() * STOP_IDS.length)]);
-  const initNode   = GRAPH[initStopId.current];
+  const [initStopId] = useState(
+    () => STOP_IDS[Math.floor(Math.random() * STOP_IDS.length)],
+  );
 
-  const [pos, setPos]             = useState({ x: initNode.x, y: initNode.y });
+  const [pos, setPos]             = useState(() => {
+    const initNode = GRAPH[initStopId];
+    return { x: initNode.x, y: initNode.y };
+  });
   const [moving, setMoving]       = useState(false);
   const [facingLeft, setFacingLeft] = useState(false);
   const remainingPath             = useRef([]);
-  const currentStop               = useRef(initStopId.current);
+  const currentStop               = useRef(initStopId);
   const timerRef                  = useRef(null);
 
-  const scheduleStep = useCallback(() => {
-    if (remainingPath.current.length > 0) {
-      const nodeId    = remainingPath.current.shift();
-      const { x, y } = GRAPH[nodeId];
-      setPos((prev) => {
-        if (x !== prev.x) setFacingLeft(x < prev.x);
-        return { x, y };
-      });
-      setMoving(true);
-      timerRef.current = setTimeout(scheduleStep, STEP_MS);
-    } else {
-      setMoving(false); // masaya ulaştı → idle
-      const idleMs = 800 + Math.random() * 2200;
-      timerRef.current = setTimeout(() => {
-        const newStop         = pickStop(currentStop.current);
-        const path            = bfs(currentStop.current, newStop);
-        currentStop.current   = newStop;
-        remainingPath.current = path.slice(1);
-        scheduleStep();
-      }, idleMs);
-    }
-  }, []);
-
   useEffect(() => {
+    const scheduleStep = () => {
+      if (remainingPath.current.length > 0) {
+        const nodeId    = remainingPath.current.shift();
+        const { x, y } = GRAPH[nodeId];
+        setPos((prev) => {
+          if (x !== prev.x) setFacingLeft(x < prev.x);
+          return { x, y };
+        });
+        setMoving(true);
+        timerRef.current = setTimeout(scheduleStep, STEP_MS);
+      } else {
+        setMoving(false); // masaya ulaştı → idle
+        const idleMs = 800 + Math.random() * 2200;
+        timerRef.current = setTimeout(() => {
+          const newStop         = pickStop(currentStop.current);
+          const path            = bfs(currentStop.current, newStop);
+          currentStop.current   = newStop;
+          remainingPath.current = path.slice(1);
+          scheduleStep();
+        }, idleMs);
+      }
+    };
+
     timerRef.current = setTimeout(scheduleStep, 500 + Math.random() * 500);
     return () => clearTimeout(timerRef.current);
-  }, [scheduleStep]);
+  }, []);
 
   return (
     <div
