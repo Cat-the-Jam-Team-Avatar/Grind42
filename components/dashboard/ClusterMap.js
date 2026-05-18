@@ -304,22 +304,81 @@ function Character() {
 
 /* ── Inventory item ── */
 
+// x < 62 = cluster içi, x > 64 = bahçe/teras
+// Varyant grupları aynı pozisyonu paylaşır — yalnızca ilk sahip olunan gösterilir
 const ITEM_POSITIONS = {
-  loba_cup: { x: 60, y: 34 },
-  pixel_cat: { x: 3, y: 78 },
-  ergonomic_chair: { x: 60, y: 62 },
-  mech_keyboard: { x: 3, y: 20 },
-  dual_monitor: { x: 60, y: 20 },
-  plant: { x: 3, y: 50 },
+  // Sol kenar (x=3)
+  rubber_duck:           { x: 3,  y: 28 },
+  toilet_paper:          { x: 3,  y: 50 },
+  sleeping_cat_black:    { x: 3,  y: 70 },
+  sleeping_cat_brown:    { x: 3,  y: 70 },
+  sleeping_cat_cream:    { x: 3,  y: 70 },
+  sleeping_cat_orange:   { x: 3,  y: 70 },
+  sleeping_cat_white:    { x: 3,  y: 70 },
+  // Sağ kenar (x=60)
+  lampshade_1:           { x: 60, y: 76 },
+  lampshade_2:           { x: 60, y: 76 },
+  lampshade_3:           { x: 60, y: 76 },
+  skull_1:               { x: 60, y: 28 },
+  skull_2:               { x: 60, y: 28 },
+  skull_3:               { x: 60, y: 28 },
+  skull_4:               { x: 60, y: 28 },
+  dancing_cat:           { x: 60, y: 44 },
+  dancing_frog:          { x: 60, y: 60 },
+  // Bahçe/teras (x > 65)
+  vase_blue_barrel_1:    { x: 72, y: 48 },
+  vase_blue_barrel_2:    { x: 72, y: 48 },
+  vase_blue_barrel_3:    { x: 72, y: 48 },
+  vase_blue_barrel_4:    { x: 72, y: 48 },
+  vase_plastic_bucket_1: { x: 72, y: 65 },
+  vase_plastic_bucket_2: { x: 72, y: 65 },
+  vase_plastic_bucket_3: { x: 72, y: 65 },
+  vase_plastic_bucket_4: { x: 72, y: 65 },
+  vase_toilet_1:         { x: 72, y: 80 },
+  vase_toilet_2:         { x: 72, y: 80 },
+  vase_toilet_3:         { x: 72, y: 80 },
+  vase_toilet_4:         { x: 72, y: 80 },
 };
 
-const SPRITE_MAP = {
-  plant: "plant",
-  loba_cup: "cup",
-  pixel_cat: "cat",
-  ergonomic_chair: "chair",
-  mech_keyboard: "keyboard",
-  dual_monitor: "monitor",
+// Varyant grupları: aynı grup içinde yalnızca ilk sahip olunan render edilir
+const VARIANT_GROUPS = {
+  sleeping_cat: ["sleeping_cat_black","sleeping_cat_brown","sleeping_cat_cream","sleeping_cat_orange","sleeping_cat_white"],
+  skull:        ["skull_1","skull_2","skull_3","skull_4"],
+  lampshade:    ["lampshade_1","lampshade_2","lampshade_3"],
+  vase_blue_barrel:    ["vase_blue_barrel_1","vase_blue_barrel_2","vase_blue_barrel_3","vase_blue_barrel_4"],
+  vase_plastic_bucket: ["vase_plastic_bucket_1","vase_plastic_bucket_2","vase_plastic_bucket_3","vase_plastic_bucket_4"],
+  vase_toilet:         ["vase_toilet_1","vase_toilet_2","vase_toilet_3","vase_toilet_4"],
+};
+
+const IMAGE_MAP = {
+  rubber_duck:           "/cluster/market/cosmetic/duck.png",
+  toilet_paper:          "/cluster/market/cosmetic/toilet_paper.png",
+  sleeping_cat_black:    "/cluster/market/cosmetic/sleeping-cat/sleeping-cat-black.png",
+  sleeping_cat_brown:    "/cluster/market/cosmetic/sleeping-cat/sleeping-cat-brown.png",
+  sleeping_cat_cream:    "/cluster/market/cosmetic/sleeping-cat/sleeping-cat-cream.png",
+  sleeping_cat_orange:   "/cluster/market/cosmetic/sleeping-cat/sleeping-cat-orange.png",
+  sleeping_cat_white:    "/cluster/market/cosmetic/sleeping-cat/sleeping-cat-white.png",
+  lampshade_1:           "/cluster/market/cosmetic/lampshade/lampshade-1.png",
+  lampshade_2:           "/cluster/market/cosmetic/lampshade/lampshade-2.png",
+  lampshade_3:           "/cluster/market/cosmetic/lampshade/lampshade-3.png",
+  skull_1:               "/cluster/market/cosmetic/skull/skull-1.png",
+  skull_2:               "/cluster/market/cosmetic/skull/skull-2.png",
+  skull_3:               "/cluster/market/cosmetic/skull/skull-3.png",
+  skull_4:               "/cluster/market/cosmetic/skull/skull-4.png",
+  dancing_cat:           "/cluster/market/cosmetic/dancing/dancing-cat.gif",
+  dancing_frog:          "/cluster/market/cosmetic/dancing/dancing-frog.gif",
+  vase_blue_barrel_1:    "/cluster/market/cosmetic/vase/vase-blue-barrel/vase-blue-barrel-1.png",
+  vase_blue_barrel_2:    "/cluster/market/cosmetic/vase/vase-blue-barrel/vase-blue-barrel-2.png",
+  vase_blue_barrel_3:    "/cluster/market/cosmetic/vase/vase-blue-barrel/vase-blue-barrel-3.png",
+  vase_blue_barrel_4:    "/cluster/market/cosmetic/vase/vase-blue-barrel/vase-blue-barrel-4.png",
+  vase_plastic_bucket_1: "/cluster/market/cosmetic/vase/vase-plastic-bucket/vase-plastic-bucket-1.png",
+  vase_plastic_bucket_2: "/cluster/market/cosmetic/vase/vase-plastic-bucket/vase-plastic-bucket-2.png",
+  vase_plastic_bucket_3: "/cluster/market/cosmetic/vase/vase-plastic-bucket/vase-plastic-bucket-3.png",
+  vase_plastic_bucket_4: "/cluster/market/cosmetic/vase/vase-plastic-bucket/vase-plastic-bucket-4.png",
+  vase_toilet_1:         "/cluster/market/cosmetic/vase/vase-toilet/vase-toilet-1.png",
+  vase_toilet_2:         "/cluster/market/cosmetic/vase/vase-toilet/vase-toilet-2.png",
+  vase_toilet_3:         "/cluster/market/cosmetic/vase/vase-toilet/vase-toilet-3.png",
+  vase_toilet_4:         "/cluster/market/cosmetic/vase/vase-toilet/vase-toilet-4.png",
 };
 
 // Envanterdeki masa renk varyasyonlarını resme eşler
@@ -336,8 +395,8 @@ const TABLE_LABELS = {
 };
 
 function MapItem({ itemId, pos }) {
-  const spriteName = SPRITE_MAP[itemId];
-  if (!spriteName) return null;
+  const imageSrc = IMAGE_MAP[itemId];
+  if (!imageSrc) return null;
   return (
     <div
       className="absolute pointer-events-none"
@@ -348,9 +407,32 @@ function MapItem({ itemId, pos }) {
         zIndex: Math.floor(pos.y) + 2,
       }}
     >
-      <PixelSprite name={spriteName} scale={2} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={imageSrc}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        style={{ width: 24, imageRendering: "pixelated" }}
+      />
     </div>
   );
+}
+
+// Varyant gruplarını tekilleştirir: her gruptan yalnızca ilk sahip olunan gösterilir
+function deduplicateVariants(ownedIds) {
+  const seen = new Set();
+  return ownedIds.filter((id) => {
+    for (const members of Object.values(VARIANT_GROUPS)) {
+      if (members.includes(id)) {
+        const key = members[0]; // grubun temsil anahtarı
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }
+    }
+    return true; // varyant grubu üyesi değil, her zaman göster
+  });
 }
 
 /* ── Desk Modal ── */
@@ -549,7 +631,7 @@ export default function ClusterMap({ inventory = [] }) {
       />
       <DecoGrid />
 
-      {ownedIds.map((id) => {
+      {deduplicateVariants(ownedIds).map((id) => {
         const pos = ITEM_POSITIONS[id];
         if (!pos) return null;
         return <MapItem key={id} itemId={id} pos={pos} />;
