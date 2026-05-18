@@ -493,7 +493,6 @@ function Character() {
 
 /* ── Inventory item ── */
 
-
 // Envanterdeki masa renk varyasyonlarını resme eşler
 const TABLE_IMAGE_MAP = {
   table_blue: "/cluster/market/cosmetic/table/table-blue.png",
@@ -506,7 +505,6 @@ const TABLE_LABELS = {
   table_pink: "Pembe",
   table_white: "Beyaz",
 };
-
 
 /* ── Desk Modal ── */
 
@@ -633,7 +631,11 @@ function DeskActionModal({
 
 /* ── Ana bileşen ── */
 
-export default function ClusterMap({ inventory = [], decoplacements = {} }) {
+export default function ClusterMap({
+  inventory = [],
+  decoplacements = {},
+  deskplacements = {},
+}) {
   const router = useRouter();
   const ownedIds = normalizeInventory(inventory);
   // Envanterdeki masa renk varyasyonlarını filtrele
@@ -650,18 +652,24 @@ export default function ClusterMap({ inventory = [], decoplacements = {} }) {
 
   // Deco yerleştirme state'i — prop'tan başlat, prop değişince güncelle
   const [decoState, setDecoState] = useState(decoplacements ?? {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     setDecoState(decoplacements ?? {});
-  }, [decoplacements]);
+  // JSON karşılaştırması: aynı içerik = yeni render tetiklemez
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(decoplacements)]);
 
   // Seçili deco pozisyonu (modal için)
   const [selectedDecoPos, setSelectedDecoPos] = useState(null);
 
-  // Mock State for Desks
-  const [desks, setDesks] = useState({
-    "12.5-37": { hasComputer: true, level: 1 },
-    "25.5-52": { hasComputer: true, level: 3 },
-  });
+  // Masa durumları — prop'tan başlat, prop değişince güncelle
+  const [desks, setDesks] = useState(deskplacements ?? {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setDesks(deskplacements ?? {});
+  // JSON karşılaştırması: aynı içerik = yeni render tetiklemez
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(deskplacements)]);
 
   const [selectedDesk, setSelectedDesk] = useState(null);
 
@@ -669,19 +677,45 @@ export default function ClusterMap({ inventory = [], decoplacements = {} }) {
     setSelectedDesk({ id: deskId, data: deskData });
   };
 
-  const handleBuy = (deskId) => {
+  // Bilgisayar satın alır — optimistik güncelleme + DB kaydı
+  async function handleBuy(deskId) {
+    const previousDesks = desks;
     setDesks((prev) => ({
       ...prev,
       [deskId]: { hasComputer: true, level: 1 },
     }));
-  };
 
-  const handleUpgrade = (deskId) => {
+    const res = await fetch("/api/inventory/desks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deskId, action: "buy" }),
+    });
+
+    if (!res.ok) {
+      // Hata durumunda eski state'e geri dön
+      setDesks(previousDesks);
+    }
+  }
+
+  // Bilgisayarı yükseltir — optimistik güncelleme + DB kaydı
+  async function handleUpgrade(deskId) {
+    const previousDesks = desks;
     setDesks((prev) => ({
       ...prev,
-      [deskId]: { ...prev[deskId], level: prev[deskId].level + 1 },
+      [deskId]: { ...prev[deskId], level: (prev[deskId]?.level ?? 1) + 1 },
     }));
-  };
+
+    const res = await fetch("/api/inventory/desks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deskId, action: "upgrade" }),
+    });
+
+    if (!res.ok) {
+      // Hata durumunda eski state'e geri dön
+      setDesks(previousDesks);
+    }
+  }
 
   // Deco pozisyonuna item yerleştirir veya kaldırır (optimistik)
   async function handleDecoPick(positionId, itemId) {
@@ -759,7 +793,6 @@ export default function ClusterMap({ inventory = [], decoplacements = {} }) {
           zIndex: 36,
         }}
       />
-
 
       <Character />
 

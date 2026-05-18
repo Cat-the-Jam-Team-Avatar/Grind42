@@ -188,6 +188,7 @@ export default async function DashboardPage() {
         <ClusterMap
           inventory={player?.inventory ?? []}
           decoplacements={player?.deco_placements ?? {}}
+          deskplacements={player?.desk_states ?? {}}
         />
       </section>
     </div>
