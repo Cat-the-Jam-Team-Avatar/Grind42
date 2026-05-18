@@ -16,19 +16,21 @@ import PixelSprite from "@/components/ui/PixelSprite";
    Durma noktaları = COL_X × COR_Y  →  "masanın önü"
 ────────────────────────────────────────────────────────────────────────── */
 
-const COR_Y  = [30, 45, 60, 75];   // 13 kaldırıldı → karakter duvardan geçmez
-const ROW_Y  = [22, 37, 52, 67, 82];
-const COL_X  = [6, 12.5, 19, 25.5, 38.5, 45, 51.5, 58];
-const MID_X  = 32;
-const ALL_X  = [6, 12.5, 19, 25.5, MID_X, 38.5, 45, 51.5, 58];
+const COR_Y = [30, 45, 60, 75]; // 13 kaldırıldı → karakter duvardan geçmez
+const ROW_Y = [22, 37, 52, 67, 82];
+const COL_X = [6, 12.5, 19, 25.5, 38.5, 45, 51.5, 58];
+const MID_X = 32;
+const ALL_X = [6, 12.5, 19, 25.5, MID_X, 38.5, 45, 51.5, 58];
 const TABLE_W = "6%";
 const STEP_MS = 300; // ms / adım → "tık tık tık" hissi
 
 /* ── Graf ── */
 
 function buildGraph() {
-  const G   = {};
-  const add  = (id, x, y) => { G[id] = { x, y, adj: [] }; };
+  const G = {};
+  const add = (id, x, y) => {
+    G[id] = { x, y, adj: [] };
+  };
   const link = (a, b) => {
     if (!G[a] || !G[b]) return;
     if (!G[a].adj.includes(b)) G[a].adj.push(b);
@@ -66,14 +68,17 @@ const STOP_IDS = COL_X.flatMap((x) => COR_Y.map((cy) => `c_${x}_${cy}`));
 
 function bfs(startId, endId) {
   if (startId === endId) return [startId];
-  const queue   = [[startId]];
+  const queue = [[startId]];
   const visited = new Set([startId]);
   while (queue.length) {
     const path = queue.shift();
     const curr = path[path.length - 1];
     for (const nb of GRAPH[curr].adj) {
       if (nb === endId) return [...path, nb];
-      if (!visited.has(nb)) { visited.add(nb); queue.push([...path, nb]); }
+      if (!visited.has(nb)) {
+        visited.add(nb);
+        queue.push([...path, nb]);
+      }
     }
   }
   return [startId];
@@ -88,7 +93,7 @@ function pickStop(excludeId) {
 
 function normalizeInventory(inventory) {
   return (inventory ?? []).map((item) =>
-    typeof item === "string" ? item : item?.item_id ?? item?.id,
+    typeof item === "string" ? item : (item?.item_id ?? item?.id),
   );
 }
 
@@ -98,21 +103,18 @@ function normalizeInventory(inventory) {
 ────────────────────────────────────────────────────────────────────────── */
 
 const DECO_POSITIONS = [
-  // Cluster sağ kenarı
-  { id: "r1", x: 65, y: 34 },
-  { id: "r2", x: 65, y: 50 },
-  { id: "r3", x: 65, y: 65 },
-  { id: "r4", x: 65, y: 80 },
-  // Çardak içi
-  { id: "arbor_center", x: 84, y: 42 },
-  // Bahçe
-  { id: "g1", x: 73, y: 48 },
-  { id: "g2", x: 85, y: 55 },
-  { id: "g3", x: 75, y: 68 },
-  { id: "g4", x: 84, y: 72 },
-  { id: "g5", x: 80, y: 82 },
-  { id: "g6", x: 80, y: 60 },
-  { id: "g7", x: 76, y: 30 },
+  // Cluster sağ kenarı — dekor için ideal çizgi
+  { id: "r2", x: 65, y: 30 },
+  { id: "r3", x: 65, y: 44 },
+  { id: "r4", x: 65, y: 58 },
+  { id: "r5", x: 65, y: 72 },
+  { id: "r6", x: 65, y: 85 },
+  // Bahçe / teras iç kısım
+  { id: "g2", x: 86, y: 25 },
+  { id: "g3", x: 76, y: 40 },
+  { id: "g4", x: 88, y: 55 },
+  { id: "g5", x: 72, y: 68 },
+  { id: "g6", x: 82, y: 80 },
 ];
 
 function DecoGrid() {
@@ -146,33 +148,12 @@ function TableGrid({ desks, onDeskClick }) {
   return (
     <>
       {ROW_Y.map((y) =>
-        COL_X.map((x) => (
-          <div
-            key={`${x}-${y}`}
-            style={{
-              position: "absolute",
-              left: `${x}%`,
-              top: `${y}%`,
-              transform: "translate(-50%, -50%)",
-              width: TABLE_W,
-              zIndex: Math.floor(y) + 1,
-            }}
-          >
-            {/* Masa */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/cluster/market/cosmetic/table/table-white.png"
-              alt=""
-              aria-hidden="true"
-              draggable={false}
-              style={{ display: "block", width: "100%", imageRendering: "pixelated" }}
-            />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/computer/computerone.png"
-              alt=""
-              aria-hidden="true"
-              draggable={false}
+        COL_X.map((x) => {
+          const deskId = `${x}-${y}`;
+          const deskData = desks[deskId] || { hasComputer: false, level: 0 };
+          return (
+            <div
+              key={deskId}
               style={{
                 position: "absolute",
                 left: `${x}%`,
@@ -199,11 +180,15 @@ function TableGrid({ desks, onDeskClick }) {
                 {/* Masa */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/cluster/table/white_table.png"
+                  src="/cluster/market/cosmetic/table/table-white.png"
                   alt=""
                   aria-hidden="true"
                   draggable={false}
-                  style={{ display: "block", width: "100%", imageRendering: "pixelated" }}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    imageRendering: "pixelated",
+                  }}
                 />
                 {/* Bilgisayar (Eğer varsa) */}
                 {deskData.hasComputer && (
@@ -244,20 +229,20 @@ function Character() {
     () => STOP_IDS[Math.floor(Math.random() * STOP_IDS.length)],
   );
 
-  const [pos, setPos]             = useState(() => {
+  const [pos, setPos] = useState(() => {
     const initNode = GRAPH[initStopId];
     return { x: initNode.x, y: initNode.y };
   });
-  const [moving, setMoving]       = useState(false);
+  const [moving, setMoving] = useState(false);
   const [facingLeft, setFacingLeft] = useState(false);
-  const remainingPath             = useRef([]);
-  const currentStop               = useRef(initStopId);
-  const timerRef                  = useRef(null);
+  const remainingPath = useRef([]);
+  const currentStop = useRef(initStopId);
+  const timerRef = useRef(null);
 
   useEffect(() => {
     const scheduleStep = () => {
       if (remainingPath.current.length > 0) {
-        const nodeId    = remainingPath.current.shift();
+        const nodeId = remainingPath.current.shift();
         const { x, y } = GRAPH[nodeId];
         setPos((prev) => {
           if (x !== prev.x) setFacingLeft(x < prev.x);
@@ -269,9 +254,9 @@ function Character() {
         setMoving(false); // masaya ulaştı → idle
         const idleMs = 800 + Math.random() * 2200;
         timerRef.current = setTimeout(() => {
-          const newStop         = pickStop(currentStop.current);
-          const path            = bfs(currentStop.current, newStop);
-          currentStop.current   = newStop;
+          const newStop = pickStop(currentStop.current);
+          const path = bfs(currentStop.current, newStop);
+          currentStop.current = newStop;
           remainingPath.current = path.slice(1);
           scheduleStep();
         }, idleMs);
@@ -295,11 +280,17 @@ function Character() {
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={moving ? "/cluster/duck/duck-walk.gif" : "/cluster/duck/duck-idle.gif"}
+        src={
+          moving ? "/cluster/duck/duck-walk.gif" : "/cluster/duck/duck-idle.gif"
+        }
         alt=""
         aria-hidden="true"
         draggable={false}
-        style={{ width: 20, imageRendering: "pixelated", transform: facingLeft ? "scaleX(-1)" : "none" }}
+        style={{
+          width: 20,
+          imageRendering: "pixelated",
+          transform: facingLeft ? "scaleX(-1)" : "none",
+        }}
       />
     </div>
   );
@@ -308,28 +299,26 @@ function Character() {
 /* ── Inventory item ── */
 
 const ITEM_POSITIONS = {
-  loba_cup:        { x: 60, y: 34 },
-  pixel_cat:       { x: 3,  y: 78 },
+  loba_cup: { x: 60, y: 34 },
+  pixel_cat: { x: 3, y: 78 },
   ergonomic_chair: { x: 60, y: 62 },
-  mech_keyboard:   { x: 3,  y: 20 },
-  dual_monitor:    { x: 60, y: 20 },
-  plant:           { x: 3,  y: 50 },
-  toilet_paper:    { x: 3,  y: 64 },
+  mech_keyboard: { x: 3, y: 20 },
+  dual_monitor: { x: 60, y: 20 },
+  plant: { x: 3, y: 50 },
 };
 
 const SPRITE_MAP = {
-  plant: "plant", loba_cup: "cup", pixel_cat: "cat",
-  ergonomic_chair: "chair", mech_keyboard: "keyboard", dual_monitor: "monitor",
-};
-
-const IMAGE_MAP = {
-  toilet_paper: "/cluster/market/cosmetic/toilet_paper.png",
+  plant: "plant",
+  loba_cup: "cup",
+  pixel_cat: "cat",
+  ergonomic_chair: "chair",
+  mech_keyboard: "keyboard",
+  dual_monitor: "monitor",
 };
 
 function MapItem({ itemId, pos }) {
-  const imageSrc = IMAGE_MAP[itemId];
   const spriteName = SPRITE_MAP[itemId];
-  if (!imageSrc && !spriteName) return null;
+  if (!spriteName) return null;
   return (
     <div
       className="absolute pointer-events-none"
@@ -340,25 +329,21 @@ function MapItem({ itemId, pos }) {
         zIndex: Math.floor(pos.y) + 2,
       }}
     >
-      {imageSrc ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={imageSrc}
-          alt=""
-          aria-hidden="true"
-          draggable={false}
-          style={{ width: 24, imageRendering: "pixelated" }}
-        />
-      ) : (
-        <PixelSprite name={spriteName} scale={2} />
-      )}
+      <PixelSprite name={spriteName} scale={2} />
     </div>
   );
 }
 
 /* ── Desk Modal ── */
 
-function DeskActionModal({ isOpen, deskId, deskData, onClose, onBuy, onUpgrade }) {
+function DeskActionModal({
+  isOpen,
+  deskId,
+  deskData,
+  onClose,
+  onBuy,
+  onUpgrade,
+}) {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -387,12 +372,16 @@ function DeskActionModal({ isOpen, deskId, deskData, onClose, onBuy, onUpgrade }
               {deskData?.hasComputer ? "Bilgisayarı Yükselt" : "Bilgisayar Al"}
             </h2>
             <div className="flex justify-center w-full my-2">
-               {deskData?.hasComputer ? (
-                 /* eslint-disable-next-line @next/next/no-img-element */
-                 <img src="/computer/computerone.png" alt="Computer" style={{ width: "64px", imageRendering: "pixelated" }} />
-               ) : (
-                 <PixelSprite name="chair" scale={3} />
-               )}
+              {deskData?.hasComputer ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src="/computer/computerone.png"
+                  alt="Computer"
+                  style={{ width: "64px", imageRendering: "pixelated" }}
+                />
+              ) : (
+                <PixelSprite name="chair" scale={3} />
+              )}
             </div>
             {deskData?.hasComputer ? (
               <div className="text-center text-sm mb-2 text-g42-gray">
@@ -401,13 +390,14 @@ function DeskActionModal({ isOpen, deskId, deskData, onClose, onBuy, onUpgrade }
               </div>
             ) : (
               <p className="text-center text-sm mb-2 text-g42-gray">
-                Bu masa boş görünüyor. Buraya bir bilgisayar kurarak logtime kazanmaya başlayabilirsin!
+                Bu masa boş görünüyor. Buraya bir bilgisayar kurarak logtime
+                kazanmaya başlayabilirsin!
               </p>
             )}
-            
+
             <button
               type="button"
-              className={`nes-btn w-full ${deskData?.hasComputer ? 'is-warning' : 'is-success'}`}
+              className={`nes-btn w-full ${deskData?.hasComputer ? "is-warning" : "is-success"}`}
               onClick={() => {
                 deskData?.hasComputer ? onUpgrade(deskId) : onBuy(deskId);
                 onClose();
@@ -426,7 +416,7 @@ function DeskActionModal({ isOpen, deskId, deskData, onClose, onBuy, onUpgrade }
 
 export default function ClusterMap({ inventory = [] }) {
   const ownedIds = normalizeInventory(inventory);
-  
+
   // Mock State for Desks
   const [desks, setDesks] = useState({
     "12.5-37": { hasComputer: true, level: 1 },
@@ -440,13 +430,16 @@ export default function ClusterMap({ inventory = [] }) {
   };
 
   const handleBuy = (deskId) => {
-    setDesks((prev) => ({ ...prev, [deskId]: { hasComputer: true, level: 1 } }));
+    setDesks((prev) => ({
+      ...prev,
+      [deskId]: { hasComputer: true, level: 1 },
+    }));
   };
 
   const handleUpgrade = (deskId) => {
     setDesks((prev) => ({
       ...prev,
-      [deskId]: { ...prev[deskId], level: prev[deskId].level + 1 }
+      [deskId]: { ...prev[deskId], level: prev[deskId].level + 1 },
     }));
   };
 
@@ -467,23 +460,6 @@ export default function ClusterMap({ inventory = [] }) {
       <TableGrid desks={desks} onDeskClick={handleDeskClick} />
       <DecoGrid />
 
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/cluster/arbor.png"
-        alt=""
-        aria-hidden="true"
-        draggable={false}
-        style={{
-          position: "absolute",
-          left: "84%",
-          top: "37%",
-          transform: "translate(-50%, -50%)",
-          width: "10%",
-          imageRendering: "pixelated",
-          zIndex: 36,
-        }}
-      />
-
       {ownedIds.map((id) => {
         const pos = ITEM_POSITIONS[id];
         if (!pos) return null;
@@ -491,9 +467,9 @@ export default function ClusterMap({ inventory = [] }) {
       })}
 
       <Character />
-      
-      <DeskActionModal 
-        isOpen={!!selectedDesk} 
+
+      <DeskActionModal
+        isOpen={!!selectedDesk}
         deskId={selectedDesk?.id}
         deskData={selectedDesk?.data}
         onClose={() => setSelectedDesk(null)}
