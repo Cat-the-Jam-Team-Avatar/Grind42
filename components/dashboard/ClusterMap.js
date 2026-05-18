@@ -231,21 +231,20 @@ function TableGrid({ desks, onDeskClick, tableColor }) {
 ────────────────────────────────────────────────────────────────────────── */
 
 function Character() {
-  const [initStopId] = useState(
-    () => STOP_IDS[Math.floor(Math.random() * STOP_IDS.length)],
-  );
-
-  const [pos, setPos] = useState(() => {
-    const initNode = GRAPH[initStopId];
-    return { x: initNode.x, y: initNode.y };
-  });
+  const [pos, setPos] = useState(null);
   const [moving, setMoving] = useState(false);
   const [facingLeft, setFacingLeft] = useState(false);
   const remainingPath = useRef([]);
-  const currentStop = useRef(initStopId);
+  const currentStop = useRef(null);
   const timerRef = useRef(null);
 
   useEffect(() => {
+    // Sadece client-side (tarayıcıda) mount olduktan sonra random üret
+    const initStopId = STOP_IDS[Math.floor(Math.random() * STOP_IDS.length)];
+    currentStop.current = initStopId;
+    const initNode = GRAPH[initStopId];
+    setPos({ x: initNode.x, y: initNode.y });
+
     const scheduleStep = () => {
       if (remainingPath.current.length > 0) {
         const nodeId = remainingPath.current.shift();
@@ -272,6 +271,8 @@ function Character() {
     timerRef.current = setTimeout(scheduleStep, 500 + Math.random() * 500);
     return () => clearTimeout(timerRef.current);
   }, []);
+
+  if (!pos) return null;
 
   return (
     <div
@@ -373,7 +374,7 @@ function DeskActionModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
           onClick={onClose}
         >
           <motion.div
