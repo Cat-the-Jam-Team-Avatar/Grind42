@@ -193,7 +193,7 @@ function ClickCoinImage({ disabled }) {
       }}
       className="block h-[190px] w-[190px] max-w-[70vw] select-none object-contain [image-rendering:pixelated] sm:h-[220px] sm:w-[220px]"
       draggable={false}
-      src="/coin-transparent.png"
+      src="/coin/coin.png"
     />
   );
 }

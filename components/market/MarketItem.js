@@ -64,10 +64,20 @@ export default function MarketItem({
   return (
     <article className="nes-container flex min-w-0 flex-col min-h-full gap-[10px] !bg-g42-paper shadow-[0_5px_0_var(--g42-line)] ![font-family:var(--font-pixelify),system-ui,sans-serif]">
       <div className="grid place-items-center min-h-[110px] border-[3px] border-g42-line bg-[radial-gradient(var(--g42-grid)_1px,transparent_1px),var(--g42-paper-2)] [background-size:9px_9px]">
-        <PixelSprite
-          name={spriteName}
-          scale={spriteName === "monitor" ? 3 : 4}
-        />
+        {item.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={item.image}
+            alt={item.name}
+            draggable={false}
+            style={{ width: 64, height: 64, objectFit: "contain", imageRendering: "pixelated" }}
+          />
+        ) : (
+          <PixelSprite
+            name={spriteName}
+            scale={spriteName === "monitor" ? 3 : 4}
+          />
+        )}
       </div>
       <p className="m-0 font-[var(--font-silkscreen),monospace] tracking-[0] text-g42-ink text-[15px] leading-[1.15]">
         {item.name}
