@@ -76,6 +76,17 @@ async function fetchTodayLogtime(player) {
   }
 }
 
+async function fetchLiveLocation(player) {
+  if (!player?.intra_login) return undefined;
+  try {
+    const profile = await fetchFortyTwoPublicProfile(player.intra_login);
+    const loc = profile?.location;
+    return typeof loc === "string" && loc.trim() ? loc.trim() : null;
+  } catch {
+    return undefined;
+  }
+}
+
 /* ── Page Component ──────────────────────────────────────────────────────── */
 
 export default async function DashboardPage() {
@@ -101,8 +112,14 @@ export default async function DashboardPage() {
   };
 
   const multiplier = getMultiplier(player?.current_streak ?? 0);
-  const yesterdayLogtime = await fetchPlayerLogtime(player);
-  const todayLogtime = await fetchTodayLogtime(player);
+  const [yesterdayLogtime, todayLogtime, liveLocation] = await Promise.all([
+    fetchPlayerLogtime(player),
+    fetchTodayLogtime(player),
+    fetchLiveLocation(player),
+  ]);
+  if (liveLocation !== undefined) {
+    player = { ...player, intra_location: liveLocation };
+  }
 
   return (
     <div className="flex flex-col gap-5">
