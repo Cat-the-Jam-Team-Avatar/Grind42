@@ -112,11 +112,14 @@ const DECO_POSITIONS = [
   { id: "r5", x: 65, y: 72 },
   { id: "r6", x: 65, y: 85 },
   // Bahçe / teras iç kısım
-  { id: "g2", x: 86, y: 25 },
-  { id: "g3", x: 76, y: 40 },
+  { id: "g1", x: 82, y: 41 },
+  { id: "g2", x: 74, y: 25 },
+  { id: "g3", x: 76, y: 50 },
   { id: "g4", x: 88, y: 55 },
-  { id: "g5", x: 72, y: 68 },
+  { id: "g5", x: 74, y: 68 },
+  { id: "g5", x: 74, y: 88 },
   { id: "g6", x: 82, y: 80 },
+  { id: "g7", x: 82, y: 60 },
 ];
 
 // MARKET_CATALOG'dan deco pozisyonuna yerleştirilebilecek kozmetikleri çıkar
@@ -673,18 +676,11 @@ export default function ClusterMap({ inventory = [], decoplacements = {} }) {
   const ownedDecoIds = ownedIds.filter((id) => DECO_CATALOG_MAP.has(id));
 
   // Sayfa yüklendiğinde DB'deki equipped rengi bul, başlangıç değeri olarak kullan
-  const equippedColor =
+  const initialTableColor =
     (inventory ?? []).find(
       (item) => TABLE_IMAGE_MAP[item?.id] && item?.is_equipped,
     )?.id ?? null;
-  const [tableColor, setTableColor] = useState(equippedColor);
-
-  // router.refresh() sonrası DB'den gelen rengi state'e yansıt
-  useEffect(() => {
-    if (equippedColor !== null) {
-      setTableColor(equippedColor);
-    }
-  }, [equippedColor]);
+  const [tableColor, setTableColor] = useState(initialTableColor);
 
   // Deco yerleştirme state'i — prop'tan başlat, prop değişince güncelle
   const [decoState, setDecoState] = useState(decoplacements ?? {});
@@ -748,21 +744,12 @@ export default function ClusterMap({ inventory = [], decoplacements = {} }) {
 
   // Seçilen masa rengini optimistik günceller ve DB'ye kaydeder
   async function handleColorChange(colorId) {
-    const previousColor = tableColor; // hata olursa geri almak için eski rengi sakla
-    setTableColor(colorId); // optimistik güncelleme
-
-    const res = await fetch("/api/inventory/use", {
+    setTableColor(colorId);
+    await fetch("/api/inventory/use", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ itemId: colorId }),
     });
-
-    if (!res.ok) {
-      // Kayıt başarısız → eski renge geri dön
-      setTableColor(previousColor);
-      return;
-    }
-
     router.refresh();
   }
 
@@ -788,6 +775,23 @@ export default function ClusterMap({ inventory = [], decoplacements = {} }) {
       <DecoGrid
         decoState={decoState}
         onDecoClick={(posId) => setSelectedDecoPos(posId)}
+      />
+
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/cluster/arbor.png"
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        style={{
+          position: "absolute",
+          left: "82%",
+          top: "36%",
+          transform: "translate(-50%, -50%)",
+          width: "10%",
+          imageRendering: "pixelated",
+          zIndex: 36,
+        }}
       />
 
       {ownedIds.map((id) => {
