@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Ana Sayfa" },
@@ -13,6 +14,25 @@ const NAV_ITEMS = [
 export default function AppNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const navSoundRef = useRef(null);
+
+  useEffect(() => {
+    navSoundRef.current = new Audio("/cluster/sound/click_strolling.wav");
+    navSoundRef.current.preload = "auto";
+    navSoundRef.current.volume = 0.45;
+    return () => {
+      if (navSoundRef.current) {
+        navSoundRef.current.pause();
+        navSoundRef.current = null;
+      }
+    };
+  }, []);
+
+  function handleNavClick() {
+    if (!navSoundRef.current) return;
+    navSoundRef.current.currentTime = 0;
+    navSoundRef.current.play().catch(() => {});
+  }
 
   async function handleLogout() {
     await fetch("/auth/sign-out", { method: "POST" });
@@ -36,6 +56,7 @@ export default function AppNav() {
             key={item.href}
             href={item.href}
             aria-current={isActive ? "page" : undefined}
+            onClick={handleNavClick}
             className={[
               "relative whitespace-nowrap px-3 py-2 text-[11px] font-[var(--font-silkscreen),monospace] tracking-wide transition-colors duration-75",
               "border-b-[3px]",

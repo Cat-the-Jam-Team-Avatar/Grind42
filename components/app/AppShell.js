@@ -2,6 +2,7 @@ import AppNav from "./AppNav";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 import LiveBalanceBadge from "./LiveBalanceBadge";
 import ProfileAvatar from "@/components/ProfileAvatar";
+import LevelUpSound from "./LevelUpSound";
 
 export default function AppShell({ children, player }) {
   const login = player?.intra_login ?? "cadet";
@@ -15,6 +16,7 @@ export default function AppShell({ children, player }) {
 
   return (
     <div className="min-h-screen text-g42-ink bg-[radial-gradient(var(--g42-grid)_1px,transparent_1px),linear-gradient(180deg,var(--g42-bg),var(--g42-bg-2))] [background-size:12px_12px,auto] flex flex-col">
+      <LevelUpSound />
       <header className="nes-container sticky top-0 z-20 w-[min(1180px,calc(100%-24px))] mx-auto mt-3 !bg-g42-paper shadow-[0_5px_0_var(--g42-line)] max-[560px]:w-[calc(100%-16px)] max-[560px]:mt-2 max-[560px]:!p-3">
         {/* ── Desktop (≥860px): single row — identity | nav center | actions ── */}
         <div className="hidden min-[860px]:grid [grid-template-columns:auto_1fr_auto] items-center gap-4">
