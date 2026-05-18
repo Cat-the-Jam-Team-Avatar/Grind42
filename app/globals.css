@@ -114,6 +114,16 @@ html[data-theme="dark"] {
   .g42-rank-table tbody tr:nth-child(odd) td {
     background: var(--g42-paper-2) !important;
   }
+
+  .g42-rank-table tbody tr.g42-current-player td {
+    background: var(--g42-coin) !important;
+    color: var(--g42-coin-ink) !important;
+    box-shadow: inset 0 0 0 2px var(--g42-accent);
+  }
+
+  .g42-rank-table tbody tr.g42-current-player td * {
+    color: inherit !important;
+  }
 }
 
 /* ── nes.css Theme Overrides ─────────────────────────────────────────────── */
