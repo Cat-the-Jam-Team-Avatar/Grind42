@@ -673,17 +673,16 @@ export default function ClusterMap({ inventory = [], decoplacements = {} }) {
   const ownedDecoIds = ownedIds.filter((id) => DECO_CATALOG_MAP.has(id));
 
   // Sayfa yüklendiğinde DB'deki equipped rengi bul, başlangıç değeri olarak kullan
+  // item.id = inventory kaydının UUID'si; item.item_id = ürün ID'si ("table_blue" vb.)
   const equippedColor =
     (inventory ?? []).find(
-      (item) => TABLE_IMAGE_MAP[item?.id] && item?.is_equipped,
-    )?.id ?? null;
+      (item) => TABLE_IMAGE_MAP[item?.item_id] && item?.is_equipped,
+    )?.item_id ?? null;
   const [tableColor, setTableColor] = useState(equippedColor);
 
   // router.refresh() sonrası DB'den gelen rengi state'e yansıt
   useEffect(() => {
-    if (equippedColor !== null) {
-      setTableColor(equippedColor);
-    }
+    setTableColor(equippedColor);
   }, [equippedColor]);
 
   // Deco yerleştirme state'i — prop'tan başlat, prop değişince güncelle
