@@ -33,7 +33,7 @@ export default function LevelUpSound() {
     if (!readyRef.current) return;
     const currentLevel = calcPlayerLevel(xp ?? 0);
     if (lastLevelRef.current !== null && currentLevel > lastLevelRef.current) {
-      if (audioRef.current) {
+      if (audioRef.current && localStorage.getItem("g42_bg_muted") !== "true") {
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(() => {});
       }

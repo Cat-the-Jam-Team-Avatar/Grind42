@@ -64,7 +64,7 @@ export default function MarketItem({
 
   async function handleBuy() {
     if (!canAfford) {
-      if (insufficientSoundRef.current) {
+      if (insufficientSoundRef.current && localStorage.getItem("g42_bg_muted") !== "true") {
         insufficientSoundRef.current.currentTime = 0;
         insufficientSoundRef.current.play().catch(() => {});
       }
@@ -83,7 +83,7 @@ export default function MarketItem({
     setLoading(false);
 
     if (res.ok) {
-      if (purchaseSoundRef.current) {
+      if (purchaseSoundRef.current && localStorage.getItem("g42_bg_muted") !== "true") {
         purchaseSoundRef.current.currentTime = 0;
         purchaseSoundRef.current.play().catch(() => {});
       }

@@ -29,7 +29,7 @@ export default function AppNav() {
   }, []);
 
   function handleNavClick() {
-    if (!navSoundRef.current) return;
+    if (!navSoundRef.current || localStorage.getItem("g42_bg_muted") === "true") return;
     navSoundRef.current.currentTime = 0;
     navSoundRef.current.play().catch(() => {});
   }
