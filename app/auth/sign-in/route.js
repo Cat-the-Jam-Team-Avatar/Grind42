@@ -15,7 +15,12 @@ function redirectToLogin(request, reason) {
 export async function GET(request) {
   try {
     const supabase = await createServerClient();
-    const origin = new URL(request.url).origin;
+    // COOLIFY_URL veya NEXT_PUBLIC_SITE_URL varsa onu kullan,
+    // yoksa request URL'inden al (local geliştirme için)
+    const origin =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      process.env.COOLIFY_URL ||
+      new URL(request.url).origin;
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: FORTY_TWO_PROVIDER,
