@@ -14,7 +14,9 @@ import {
   getTodayDateString,
 } from "@/lib/42api/logtime";
 import {
+  buildFortyTwoCoalitionPatch,
   buildFortyTwoProfilePatch,
+  fetchFortyTwoPrimaryCoalition,
   fetchFortyTwoPublicProfile,
   getPlayerFortyTwoTimeZone,
 } from "@/lib/auth/forty-two";
@@ -23,11 +25,26 @@ import { getMultiplier } from "@/lib/streak";
 /* ── Server helpers ──────────────────────────────────────────────────────── */
 
 async function syncMissingFortyTwoProfile(supabase, player) {
-  if (!player?.intra_login || player.profile_image_url) return player;
+  if (!player?.intra_login) return player;
+
+  const needsProfile = !player.profile_image_url;
+  const needsCoalition = !player.coalition_slug;
+
+  if (!needsProfile && !needsCoalition) return player;
 
   try {
-    const profile = await fetchFortyTwoPublicProfile(player.intra_login);
-    const patch = buildFortyTwoProfilePatch(profile);
+    const profile = needsProfile
+      ? await fetchFortyTwoPublicProfile(player.intra_login)
+      : player.forty_two_profile;
+    const coalition = needsCoalition
+      ? await fetchFortyTwoPrimaryCoalition(player.intra_login, profile)
+      : undefined;
+    const patch = {
+      ...(needsProfile ? buildFortyTwoProfilePatch(profile) : {}),
+      ...(needsCoalition ? buildFortyTwoCoalitionPatch(coalition) : {}),
+    };
+
+    if (Object.keys(patch).length === 0) return player;
 
     const { data, error } = await supabase
       .from("users")

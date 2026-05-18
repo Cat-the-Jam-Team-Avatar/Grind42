@@ -7,6 +7,12 @@ import ProfileAvatar from "@/components/ProfileAvatar";
 const TABS = [
   { id: "weekly", label: "Bu Hafta" },
   { id: "allTime", label: "Tüm Zamanlar" },
+  { id: "coalition", label: "Koalisyon" },
+];
+
+const COALITION_METRIC_TABS = [
+  { id: "weekly", label: "Haftalık" },
+  { id: "allTime", label: "Toplam" },
 ];
 
 const EMPTY_METRIC = {
@@ -40,6 +46,31 @@ function getRankTone(rank) {
 
 function getDisplayName(row) {
   return row?.display_name ?? row?.intra_login ?? "cadet";
+}
+
+function getCoalitionName(coalition) {
+  return coalition?.name ?? coalition?.slug ?? "Koalisyon yok";
+}
+
+function CoalitionBadge({ coalition }) {
+  if (!coalition) {
+    return (
+      <span className="inline-flex max-w-full items-center gap-2 truncate text-[11px] leading-4 text-g42-muted">
+        <span className="h-3 w-3 shrink-0 border-[2px] border-g42-line bg-g42-bg-2" />
+        <span className="truncate">Koalisyon yok</span>
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex max-w-full items-center gap-2 truncate text-[11px] leading-4 text-g42-ink-soft">
+      <span
+        className="h-3 w-3 shrink-0 border-[2px] border-g42-line"
+        style={{ backgroundColor: coalition.color ?? "var(--g42-accent)" }}
+      />
+      <span className="truncate">{getCoalitionName(coalition)}</span>
+    </span>
+  );
 }
 
 function StatTile({ label, value }) {
@@ -114,6 +145,9 @@ function PodiumCard({ row }) {
           <p className="m-0 mt-1 truncate text-[12px] leading-5 text-g42-muted">
             @{row.intra_login}
           </p>
+          <div className="mt-2">
+            <CoalitionBadge coalition={row.coalition} />
+          </div>
         </div>
       </div>
       <div className="relative mt-4 flex items-end justify-between gap-3">
@@ -159,6 +193,9 @@ function CurrentUserPanel({ row, scoreLabel }) {
             {getDisplayName(row)}
           </p>
           <p className="m-0 truncate text-[12px] leading-5">@{row.intra_login}</p>
+          <div className="mt-1">
+            <CoalitionBadge coalition={row.coalition} />
+          </div>
         </div>
       </div>
       <div className="min-[760px]:text-right">
@@ -171,7 +208,215 @@ function CurrentUserPanel({ row, scoreLabel }) {
   );
 }
 
-function EmptyState({ errorMessage }) {
+function CoalitionControls({
+  metricId,
+  onMetricChange,
+  onSelect,
+  options,
+  selectedCoalition,
+  selectedSlug,
+}) {
+  if (options.length === 0) {
+    return (
+      <section className="border-[3px] border-dashed border-g42-line bg-g42-paper-2 p-4 text-g42-ink-soft">
+        <p className="m-0 font-[var(--font-silkscreen),monospace] text-[12px] leading-5 text-g42-accent-2">
+          Koalisyon verisi bekleniyor
+        </p>
+        <p className="m-0 mt-1 text-[14px] leading-5">
+          Backfill veya yeni giriş senkronizasyonu tamamlanınca koalisyon filtresi dolacak.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="grid gap-3 border-[3px] border-g42-line bg-g42-paper-2 p-3 shadow-[4px_4px_0_var(--g42-line)] min-[760px]:grid-cols-[minmax(220px,320px)_1fr_auto] min-[760px]:items-end">
+      <label className="min-w-0">
+        <span className="mb-1 block font-[var(--font-silkscreen),monospace] text-[9px] uppercase leading-4 text-g42-muted">
+          Koalisyon
+        </span>
+        <select
+          className="w-full border-[3px] border-g42-line bg-g42-paper px-3 py-2 font-[var(--font-pixelify),system-ui,sans-serif] text-[14px] leading-5 text-g42-ink shadow-[3px_3px_0_var(--g42-line)]"
+          onChange={(event) => onSelect(event.target.value)}
+          value={selectedSlug}
+        >
+          {options.map((option) => (
+            <option key={option.slug} value={option.slug}>
+              {option.name}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <div className="min-w-0">
+        <p className="m-0 mb-2 font-[var(--font-silkscreen),monospace] text-[9px] uppercase leading-4 text-g42-muted">
+          Filtre
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {COALITION_METRIC_TABS.map((tab) => (
+            <button
+              aria-pressed={metricId === tab.id}
+              className={[
+                "nes-btn min-w-[108px] px-2 py-2 text-[10px]",
+                metricId === tab.id ? "is-primary" : "",
+              ].join(" ")}
+              key={tab.id}
+              onClick={() => onMetricChange(tab.id)}
+              type="button"
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="min-w-0 border-[3px] border-g42-line bg-g42-paper px-3 py-2 shadow-[3px_3px_0_var(--g42-line)]">
+        <p className="m-0 font-[var(--font-silkscreen),monospace] text-[9px] uppercase leading-4 text-g42-muted">
+          Seçili
+        </p>
+        <div className="mt-1">
+          <CoalitionBadge coalition={selectedCoalition} />
+        </div>
+        <p className="m-0 mt-1 text-[11px] leading-4 text-g42-ink-soft">
+          {formatNumber(selectedCoalition?.totalPlayers ?? 0)} cadet
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function CoalitionComparison({ standings }) {
+  if (standings.length === 0) {
+    return (
+      <section className="border-[3px] border-dashed border-g42-line bg-g42-paper-2 p-4 text-g42-ink-soft">
+        <p className="m-0 font-[var(--font-silkscreen),monospace] text-[12px] leading-5 text-g42-accent-2">
+          Koalisyon karşılaştırması bekleniyor
+        </p>
+        <p className="m-0 mt-1 text-[14px] leading-5">
+          Haftalık koalisyon toplamları, koalisyon backfill verisi geldikten sonra hesaplanacak.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="nes-container min-w-0 !bg-g42-paper shadow-[0_5px_0_var(--g42-line)] ![font-family:var(--font-pixelify),system-ui,sans-serif] with-title">
+      <p className="title">Koalisyon Kapışması</p>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="m-0 font-[var(--font-silkscreen),monospace] text-[13px] leading-5 text-g42-accent-2">
+            Haftalık Toplam LC
+          </p>
+          <p className="m-0 mt-1 text-[14px] leading-5 text-g42-ink-soft">
+            Koalisyonlar bu hafta üyelerinin topladığı LogCoin toplamına göre sıralanır.
+          </p>
+        </div>
+        <p className="m-0 font-[var(--font-silkscreen),monospace] text-[10px] leading-5 text-g42-muted">
+          Tie-break: aktif cadet / üye / isim
+        </p>
+      </div>
+
+      <div className="hidden overflow-x-auto min-[760px]:block">
+        <table className="nes-table is-bordered g42-rank-table min-w-[760px] !bg-g42-paper !text-g42-ink w-full text-xs">
+          <thead>
+            <tr>
+              <th className="align-middle !bg-g42-paper !text-g42-ink">#</th>
+              <th className="align-middle !bg-g42-paper !text-g42-ink">
+                Koalisyon
+              </th>
+              <th className="align-middle !bg-g42-paper !text-g42-ink">
+                Haftalık LC
+              </th>
+              <th className="align-middle !bg-g42-paper !text-g42-ink">
+                Aktif
+              </th>
+              <th className="align-middle !bg-g42-paper !text-g42-ink">
+                Üye
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {standings.map((standing) => (
+              <tr
+                className={
+                  standing.isCurrentUserCoalition
+                    ? "g42-current-player"
+                    : undefined
+                }
+                key={standing.coalition.slug}
+              >
+                <td className="align-middle !bg-g42-paper !text-g42-ink">
+                  <span
+                    className={[
+                      "inline-grid h-[34px] w-[34px] place-items-center border-[3px] border-g42-line font-[var(--font-silkscreen),monospace]",
+                      getRankTone(standing.rank),
+                    ].join(" ")}
+                  >
+                    {standing.rank}
+                  </span>
+                </td>
+                <td className="align-middle !bg-g42-paper !text-g42-ink">
+                  <CoalitionBadge coalition={standing.coalition} />
+                </td>
+                <td className="align-middle !bg-g42-paper !text-g42-ink font-[var(--font-silkscreen),monospace] tracking-[0]">
+                  {formatNumber(standing.weeklyScore)} LC
+                </td>
+                <td className="align-middle !bg-g42-paper !text-g42-ink font-[var(--font-silkscreen),monospace] tracking-[0]">
+                  {formatNumber(standing.activePlayers)}
+                </td>
+                <td className="align-middle !bg-g42-paper !text-g42-ink font-[var(--font-silkscreen),monospace] tracking-[0]">
+                  {formatNumber(standing.totalPlayers)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="grid gap-3 min-[760px]:hidden">
+        {standings.map((standing) => (
+          <article
+            className={[
+              "grid grid-cols-[auto_1fr] gap-3 border-[3px] border-g42-line bg-g42-paper-2 p-3 shadow-[3px_3px_0_var(--g42-line)]",
+              standing.isCurrentUserCoalition
+                ? "!bg-g42-coin !text-g42-coin-ink"
+                : "",
+            ].join(" ")}
+            key={standing.coalition.slug}
+          >
+            <span
+              className={[
+                "grid h-10 w-10 place-items-center border-[3px] border-g42-line font-[var(--font-silkscreen),monospace] text-[12px]",
+                getRankTone(standing.rank),
+              ].join(" ")}
+            >
+              {standing.rank}
+            </span>
+            <div className="min-w-0">
+              <CoalitionBadge coalition={standing.coalition} />
+              <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] leading-5">
+                <span>Haftalık LC</span>
+                <strong className="text-right font-[var(--font-silkscreen),monospace]">
+                  {formatNumber(standing.weeklyScore)} LC
+                </strong>
+                <span>Aktif Cadet</span>
+                <strong className="text-right font-[var(--font-silkscreen),monospace]">
+                  {formatNumber(standing.activePlayers)}
+                </strong>
+                <span>Üye</span>
+                <strong className="text-right font-[var(--font-silkscreen),monospace]">
+                  {formatNumber(standing.totalPlayers)}
+                </strong>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function EmptyState({ emptyMessage, errorMessage }) {
   return (
     <div className="border-[3px] border-dashed border-g42-line bg-g42-paper-2 p-6 text-center">
       <p className="m-0 font-[var(--font-silkscreen),monospace] text-[13px] leading-6 text-g42-accent-2">
@@ -179,6 +424,7 @@ function EmptyState({ errorMessage }) {
       </p>
       <p className="m-0 mx-auto mt-2 max-w-[520px] text-[15px] leading-6 text-g42-ink-soft">
         {errorMessage ??
+          emptyMessage ??
           "İlk claim veya click sync tamamlandığında tablo otomatik olarak dolacak."}
       </p>
     </div>
@@ -188,12 +434,15 @@ function EmptyState({ errorMessage }) {
 function DesktopTable({ rows, scoreLabel }) {
   return (
     <div className="hidden overflow-x-auto min-[760px]:block">
-      <table className="nes-table is-bordered g42-rank-table min-w-[720px] !bg-g42-paper !text-g42-ink w-full text-xs">
+      <table className="nes-table is-bordered g42-rank-table min-w-[860px] !bg-g42-paper !text-g42-ink w-full text-xs">
         <thead>
           <tr>
             <th className="align-middle !bg-g42-paper !text-g42-ink">#</th>
             <th className="align-middle !bg-g42-paper !text-g42-ink">
               Kullanıcı
+            </th>
+            <th className="align-middle !bg-g42-paper !text-g42-ink">
+              Koalisyon
             </th>
             <th className="align-middle !bg-g42-paper !text-g42-ink">
               {scoreLabel}
@@ -234,6 +483,9 @@ function DesktopTable({ rows, scoreLabel }) {
                     </p>
                   </div>
                 </div>
+              </td>
+              <td className="align-middle !bg-g42-paper !text-g42-ink">
+                <CoalitionBadge coalition={row.coalition} />
               </td>
               <td className="align-middle !bg-g42-paper !text-g42-ink font-[var(--font-silkscreen),monospace] tracking-[0]">
                 {formatNumber(row.score)} LC
@@ -286,6 +538,10 @@ function MobileRows({ rows, scoreLabel }) {
               </div>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] leading-5">
+              <span>Koalisyon</span>
+              <strong className="flex min-w-0 justify-end font-normal">
+                <CoalitionBadge coalition={row.coalition} />
+              </strong>
               <span>{scoreLabel}</span>
               <strong className="text-right font-[var(--font-silkscreen),monospace]">
                 {formatNumber(row.score)} LC
@@ -305,10 +561,50 @@ function MobileRows({ rows, scoreLabel }) {
 export default function LeaderboardTable({ errorMessage, leaderboard }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("weekly");
+  const [coalitionMetricId, setCoalitionMetricId] = useState("weekly");
   const [isPending, startTransition] = useTransition();
-  const metric = leaderboard?.[activeTab] ?? EMPTY_METRIC;
+  const coalitionOptions = leaderboard?.coalitions?.options ?? [];
+  const coalitionStandings = leaderboard?.coalitions?.weeklyStandings ?? [];
+  const preferredCoalitionSlug =
+    leaderboard?.coalitions?.currentUserCoalitionSlug ?? "";
+  const defaultCoalitionSlug = coalitionOptions.some(
+    (option) => option.slug === preferredCoalitionSlug
+  )
+    ? preferredCoalitionSlug
+    : coalitionOptions[0]?.slug ?? "";
+  const [requestedCoalitionSlug, setRequestedCoalitionSlug] = useState("");
+  const selectedCoalitionSlug = coalitionOptions.some(
+    (option) => option.slug === requestedCoalitionSlug
+  )
+    ? requestedCoalitionSlug
+    : defaultCoalitionSlug;
+  const selectedCoalition =
+    coalitionOptions.find((option) => option.slug === selectedCoalitionSlug) ??
+    null;
+  const isCoalitionTab = activeTab === "coalition";
+  const metric = isCoalitionTab
+    ? leaderboard?.coalitions?.metricsBySlug?.[selectedCoalitionSlug]?.[
+        coalitionMetricId
+      ] ?? EMPTY_METRIC
+    : leaderboard?.[activeTab] ?? EMPTY_METRIC;
   const podiumRows = useMemo(() => metric.rows.slice(0, 3), [metric.rows]);
   const rows = metric.rows;
+  const statLabels = isCoalitionTab
+    ? {
+        active: "Aktif Skor",
+        leader: "Lider Skor",
+        pool: "Koalisyon Havuzu",
+        total: "Koalisyon Cadet",
+      }
+    : {
+        active: "Aktif Skor",
+        leader: "Lider Skor",
+        pool: "Havuz",
+        total: "Toplam Cadet",
+      };
+  const emptyMessage = isCoalitionTab
+    ? "Koalisyon verisi profil senkronizasyonu veya backfill sonrası burada görünecek."
+    : undefined;
 
   function refreshLeaderboard() {
     startTransition(() => {
@@ -326,7 +622,7 @@ export default function LeaderboardTable({ errorMessage, leaderboard }) {
               Kampüs Sıralaması
             </p>
             <p className="m-0 mt-2 max-w-[720px] text-[17px] leading-snug text-g42-ink-soft">
-              Haftanın grind listesi ve tüm zamanlar LogCoin tablosu tek ekranda.
+              Haftanın grind listesi, tüm zamanlar ve koalisyon kapışması tek ekranda.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 min-[760px]:justify-end">
@@ -348,10 +644,10 @@ export default function LeaderboardTable({ errorMessage, leaderboard }) {
       </section>
 
       <section className="grid gap-3 min-[760px]:grid-cols-4">
-        <StatTile label="Toplam Cadet" value={formatNumber(metric.totalPlayers)} />
-        <StatTile label="Aktif Skor" value={formatNumber(metric.activePlayers)} />
-        <StatTile label="Lider Skor" value={`${formatNumber(metric.topScore)} LC`} />
-        <StatTile label="Havuz" value={`${formatNumber(metric.totalScore)} LC`} />
+        <StatTile label={statLabels.total} value={formatNumber(metric.totalPlayers)} />
+        <StatTile label={statLabels.active} value={formatNumber(metric.activePlayers)} />
+        <StatTile label={statLabels.leader} value={`${formatNumber(metric.topScore)} LC`} />
+        <StatTile label={statLabels.pool} value={`${formatNumber(metric.totalScore)} LC`} />
       </section>
 
       <section className="flex flex-wrap gap-2">
@@ -366,8 +662,22 @@ export default function LeaderboardTable({ errorMessage, leaderboard }) {
         ))}
       </section>
 
+      {isCoalitionTab ? (
+        <>
+          <CoalitionComparison standings={coalitionStandings} />
+          <CoalitionControls
+            metricId={coalitionMetricId}
+            onMetricChange={setCoalitionMetricId}
+            onSelect={setRequestedCoalitionSlug}
+            options={coalitionOptions}
+            selectedCoalition={selectedCoalition}
+            selectedSlug={selectedCoalitionSlug}
+          />
+        </>
+      ) : null}
+
       {errorMessage || rows.length === 0 ? (
-        <EmptyState errorMessage={errorMessage} />
+        <EmptyState emptyMessage={emptyMessage} errorMessage={errorMessage} />
       ) : (
         <>
           <section className="grid gap-3 min-[760px]:grid-cols-3">
