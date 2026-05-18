@@ -7,12 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "auth:setup42": "node scripts/setup-42-provider.mjs"
+    "auth:setup42": "node scripts/setup-42-provider.mjs",
+    "postinstall": "node -e \"try{const p=require.resolve('lightningcss-darwin-arm64/lightningcss.darwin-arm64.node');const fs=require('fs');const t=require('path').join(require.resolve('lightningcss/package.json'),'..','lightningcss.darwin-arm64.node');if(!fs.existsSync(t))fs.symlinkSync(p,t);}catch(e){}\""
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
     "framer-motion": "^12.38.0",
+    "lightningcss": "^1.32.0",
     "nes.css": "^2.2.1",
     "next": "^16.2.6",
     "react": "19.2.4",
@@ -24,5 +26,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4"
+  },
+  "optionalDependencies": {
+    "lightningcss-darwin-arm64": "^1.32.0"
   }
 }
