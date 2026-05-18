@@ -36,6 +36,9 @@ create table if not exists users (
   last_claim_date date,
   streak_started_at date,
   total_clicks    integer not null default 0,
+  click_window_count integer not null default 0,
+  click_window_started_at timestamptz,
+  click_window_expires_at timestamptz,
   xp              integer not null default 0,
   pc_level        integer not null default 0,
   streak_frozen_until date,
@@ -70,7 +73,25 @@ alter table users
   add column if not exists last_logtime_date date,
   add column if not exists last_logtime_hours numeric,
   add column if not exists last_logtime_seconds integer,
-  add column if not exists last_logtime_synced_at timestamptz;
+  add column if not exists last_logtime_synced_at timestamptz,
+  add column if not exists click_window_count integer not null default 0,
+  add column if not exists click_window_started_at timestamptz,
+  add column if not exists click_window_expires_at timestamptz;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'users_click_window_count_range'
+      and conrelid = 'public.users'::regclass
+  ) then
+    alter table users
+      add constraint users_click_window_count_range
+      check (click_window_count >= 0 and click_window_count <= 1000);
+  end if;
+end;
+$$;
 
 create unique index if not exists users_forty_two_id_key
   on users(forty_two_id)
@@ -135,6 +156,12 @@ create policy "Users can read own inventory"
 create policy "Users can read own market purchases"
   on market_purchases for select to authenticated using ((select auth.uid()) = user_id);
 
+revoke update (
+  click_window_count,
+  click_window_started_at,
+  click_window_expires_at
+) on table users from anon, authenticated;
+
 grant select on table inventory to authenticated;
 grant select on table market_purchases to authenticated;
 grant select, insert, update, delete on table inventory to service_role;
@@ -142,6 +169,39 @@ grant select, insert on table market_purchases to service_role;
 grant select, update on table users to service_role;
 grant usage, select on sequence inventory_id_seq to service_role;
 grant usage, select on sequence market_purchases_id_seq to service_role;
+
+-- ─── Click Window Column Guard ──────────────────────────────────────────────
+create or replace function prevent_client_click_window_update()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if current_role in ('anon', 'authenticated')
+    and (
+      new.click_window_count is distinct from old.click_window_count
+      or new.click_window_started_at is distinct from old.click_window_started_at
+      or new.click_window_expires_at is distinct from old.click_window_expires_at
+    ) then
+    raise exception 'click_window_server_only' using errcode = '42501';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists protect_click_window_columns on users;
+create trigger protect_click_window_columns
+  before update of
+    click_window_count,
+    click_window_started_at,
+    click_window_expires_at
+  on users
+  for each row
+  execute function prevent_client_click_window_update();
+
+revoke all on function prevent_client_click_window_update()
+  from public, anon, authenticated;
 
 -- ─── Weekly Reset Function (call via cron / pg_cron) ─────────────────────────
 create or replace function reset_weekly()
@@ -160,6 +220,177 @@ begin
   update users set claimed_today = false;
 end;
 $$;
+
+-- ─── Atomic Click Window Sync ───────────────────────────────────────────────
+create or replace function sync_click_window(
+  p_user_id uuid,
+  p_coins integer default 0,
+  p_xp integer default 0,
+  p_clicks integer default 0,
+  p_window_max integer default 1000,
+  p_window_hours integer default 4
+)
+returns table (
+  balance integer,
+  total_coins integer,
+  weekly_coins integer,
+  total_clicks integer,
+  xp integer,
+  click_window_count integer,
+  click_window_started_at timestamptz,
+  click_window_expires_at timestamptz,
+  accepted_clicks integer,
+  rejected_clicks integer,
+  synced_coins integer,
+  synced_xp integer
+)
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_now timestamptz := now();
+  v_window_max integer := least(greatest(coalesce(p_window_max, 1000), 1), 1000);
+  v_window_hours integer := least(greatest(coalesce(p_window_hours, 4), 1), 24);
+  v_requested_clicks integer := greatest(coalesce(p_clicks, 0), 0);
+  v_safe_clicks integer;
+  v_safe_coins integer := greatest(coalesce(p_coins, 0), 0);
+  v_safe_xp integer := greatest(coalesce(p_xp, 0), 0);
+  v_balance integer;
+  v_total_coins integer;
+  v_weekly_coins integer;
+  v_total_clicks integer;
+  v_xp integer;
+  v_click_window_count integer;
+  v_click_window_started_at timestamptz;
+  v_click_window_expires_at timestamptz;
+  v_remaining_clicks integer;
+  v_accepted_clicks integer;
+  v_rejected_clicks integer;
+  v_synced_coins integer;
+  v_synced_xp integer;
+begin
+  if p_user_id is null then
+    raise exception 'click_window_user_required' using errcode = '22023';
+  end if;
+
+  select
+    users.balance,
+    users.total_coins,
+    users.weekly_coins,
+    users.total_clicks,
+    users.xp,
+    users.click_window_count,
+    users.click_window_started_at,
+    users.click_window_expires_at
+  into
+    v_balance,
+    v_total_coins,
+    v_weekly_coins,
+    v_total_clicks,
+    v_xp,
+    v_click_window_count,
+    v_click_window_started_at,
+    v_click_window_expires_at
+  from users
+  where users.id = p_user_id
+  for update;
+
+  if not found then
+    raise exception 'click_window_user_not_found' using errcode = 'P0002';
+  end if;
+
+  if v_click_window_expires_at is not null
+    and v_click_window_expires_at <= v_now then
+    v_click_window_count := 0;
+    v_click_window_started_at := null;
+    v_click_window_expires_at := null;
+  end if;
+
+  v_safe_clicks := least(v_requested_clicks, v_window_max);
+  v_remaining_clicks := greatest(v_window_max - coalesce(v_click_window_count, 0), 0);
+  v_accepted_clicks := least(v_safe_clicks, v_remaining_clicks);
+  v_rejected_clicks := greatest(v_requested_clicks - v_accepted_clicks, 0);
+
+  if v_accepted_clicks > 0 and coalesce(v_click_window_count, 0) = 0 then
+    v_click_window_started_at := v_now;
+    v_click_window_expires_at := v_now + make_interval(hours => v_window_hours);
+  end if;
+
+  if v_requested_clicks = 0 then
+    v_synced_coins := 0;
+    v_synced_xp := 0;
+  elsif v_accepted_clicks = 0 then
+    v_synced_coins := 0;
+    v_synced_xp := 0;
+  elsif v_accepted_clicks < v_requested_clicks then
+    v_synced_coins := round((v_safe_coins::numeric * v_accepted_clicks) / v_requested_clicks)::integer;
+    v_synced_xp := round((v_safe_xp::numeric * v_accepted_clicks) / v_requested_clicks)::integer;
+  else
+    v_synced_coins := v_safe_coins;
+    v_synced_xp := v_safe_xp;
+  end if;
+
+  v_click_window_count := least(
+    v_window_max,
+    coalesce(v_click_window_count, 0) + v_accepted_clicks
+  );
+
+  update users as target
+  set
+    balance = coalesce(v_balance, 0) + v_synced_coins,
+    total_coins = coalesce(v_total_coins, 0) + v_synced_coins,
+    weekly_coins = coalesce(v_weekly_coins, 0) + v_synced_coins,
+    total_clicks = coalesce(v_total_clicks, 0) + v_accepted_clicks,
+    xp = coalesce(v_xp, 0) + v_synced_xp,
+    click_window_count = v_click_window_count,
+    click_window_started_at = v_click_window_started_at,
+    click_window_expires_at = v_click_window_expires_at
+  where target.id = p_user_id
+  returning
+    target.balance,
+    target.total_coins,
+    target.weekly_coins,
+    target.total_clicks,
+    target.xp,
+    target.click_window_count,
+    target.click_window_started_at,
+    target.click_window_expires_at
+  into
+    balance,
+    total_coins,
+    weekly_coins,
+    total_clicks,
+    xp,
+    click_window_count,
+    click_window_started_at,
+    click_window_expires_at;
+
+  accepted_clicks := v_accepted_clicks;
+  rejected_clicks := v_rejected_clicks;
+  synced_coins := v_synced_coins;
+  synced_xp := v_synced_xp;
+
+  return next;
+end;
+$$;
+
+revoke all on function sync_click_window(
+  uuid,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer
+) from public, anon, authenticated;
+
+grant execute on function sync_click_window(
+  uuid,
+  integer,
+  integer,
+  integer,
+  integer,
+  integer
+) to service_role;
 
 -- ─── Atomic Market Purchase ─────────────────────────────────────────────────
 create or replace function purchase_market_item(

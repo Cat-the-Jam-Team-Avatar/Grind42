@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePlayerStore } from "@/store/usePlayerStore";
-import PixelSprite, { CoinIcon } from "@/components/ui/PixelSprite";
+import { CoinIcon } from "@/components/ui/PixelSprite";
 
 /* ── Floating Coin Text ──────────────────────────────────────────────────── */
 
@@ -179,6 +179,25 @@ function LockOverlay({ unlocksAt }) {
   );
 }
 
+/* ── Click Coin ───────────────────────────────────────────────────────────── */
+
+function ClickCoinImage({ disabled }) {
+  return (
+    <motion.img
+      alt=""
+      aria-hidden="true"
+      animate={{
+        filter: disabled
+          ? "grayscale(1) opacity(0.72)"
+          : "drop-shadow(0 10px 16px rgba(255,200,58,0.2))",
+      }}
+      className="block h-[190px] w-[190px] max-w-[70vw] select-none object-contain [image-rendering:pixelated] sm:h-[220px] sm:w-[220px]"
+      draggable={false}
+      src="/coin-transparent.png"
+    />
+  );
+}
+
 /* ── Main CampusClicker ──────────────────────────────────────────────────── */
 
 export default function CampusClicker() {
@@ -186,6 +205,8 @@ export default function CampusClicker() {
   const comboCount = usePlayerStore((s) => s.combo_count);
   const comboMult = usePlayerStore((s) => s.combo_multiplier);
   const clickLocked = usePlayerStore((s) => s.click_locked_until);
+  const clickWindowExpiresAt = usePlayerStore((s) => s.click_window_expires_at);
+  const resetExpiredClickWindow = usePlayerStore((s) => s.resetExpiredClickWindow);
   const balance = usePlayerStore((s) => s.balance);
   const sessionClicks = usePlayerStore((s) => s.session_clicks);
 
@@ -226,15 +247,19 @@ export default function CampusClicker() {
   }, [comboCount]);
 
   useEffect(() => {
-    const tick = () => setClock(Date.now());
+    const tick = () => {
+      resetExpiredClickWindow();
+      setClock(Date.now());
+    };
     const timeout = setTimeout(tick, 0);
-    const interval = clickLocked ? setInterval(tick, 1000) : null;
+    const interval =
+      clickLocked || clickWindowExpiresAt ? setInterval(tick, 1000) : null;
 
     return () => {
       clearTimeout(timeout);
       if (interval) clearInterval(interval);
     };
-  }, [clickLocked]);
+  }, [clickLocked, clickWindowExpiresAt, resetExpiredClickWindow]);
 
   const isLocked = clickLocked !== null && (clock === null || clock < clickLocked);
 
@@ -320,20 +345,23 @@ export default function CampusClicker() {
       {/* Clickable PC */}
       <div className="relative">
         <motion.button
+          type="button"
           onClick={handleClick}
           disabled={isLocked}
-          whileTap={isLocked ? {} : { scale: 0.92 }}
+          whileHover={isLocked ? {} : { rotate: -2, scale: 1.04 }}
+          whileTap={isLocked ? {} : { rotate: 2, scale: 0.9 }}
           className={`
-            relative z-[10] cursor-pointer border-none bg-transparent p-4
+            relative z-[10] cursor-pointer appearance-none border-none bg-transparent p-0 shadow-none
             transition-all duration-150
+            outline-none ring-0 [-webkit-tap-highlight-color:transparent]
+            active:outline-none active:ring-0 active:shadow-none
+            focus:outline-none focus:ring-0 focus:shadow-none
+            focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-none
             ${isLocked ? "grayscale opacity-50 cursor-not-allowed" : ""}
           `}
           aria-label="Kampüs bilgisayarına tıkla, coin kazan"
         >
-          {/* Glow ring */}
-          <div className="g42-glow-pulse absolute inset-[-12px] rounded-lg z-[-1]" />
-
-          <PixelSprite name="campus_pc" scale={5} />
+          <ClickCoinImage disabled={isLocked} />
         </motion.button>
 
         {/* Lock overlay */}

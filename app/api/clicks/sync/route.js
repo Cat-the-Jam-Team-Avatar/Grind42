@@ -1,5 +1,30 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { CLICK_WINDOW_HOURS, CLICK_WINDOW_MAX } from "@/lib/economy";
+
+function isMissingClickWindowSchemaError(error) {
+  return ["PGRST202", "PGRST204", "PGRST205", "42P01", "42703"].includes(
+    error?.code,
+  );
+}
+
+function toClickWindow(data) {
+  const expiresAt = data.click_window_expires_at ?? null;
+  const expiresAtMs = expiresAt ? Date.parse(expiresAt) : null;
+  const isLocked =
+    (data.click_window_count ?? 0) >= CLICK_WINDOW_MAX &&
+    Number.isFinite(expiresAtMs) &&
+    expiresAtMs > Date.now();
+
+  return {
+    count: data.click_window_count ?? 0,
+    expiresAt,
+    lockedUntil: isLocked ? expiresAtMs : null,
+    max: CLICK_WINDOW_MAX,
+    startedAt: data.click_window_started_at ?? null,
+  };
+}
 
 /**
  * POST /api/clicks/sync
@@ -35,46 +60,65 @@ export async function POST(request) {
   // Round coins since DB column is integer
   const safeCoins = Math.round(Math.max(0, Math.min(coins, 50000)));
   const safeXp = Math.round(Math.max(0, Math.min(xp ?? 0, 10000)));
-  const safeClicks = Math.round(Math.max(0, Math.min(clicks, 2000)));
+  const safeClicks = Math.round(Math.max(0, Math.min(clicks, CLICK_WINDOW_MAX)));
 
-  if (safeCoins === 0 && safeXp === 0) {
-    return NextResponse.json({ ok: true, synced: 0 });
-  }
+  let admin;
 
-  // Fetch current player data for atomic increment
-  const { data: player, error: fetchError } = await supabase
-    .from("users")
-    .select("balance, total_coins, weekly_coins, total_clicks, xp")
-    .eq("id", user.id)
-    .single();
-
-  if (fetchError || !player) {
+  try {
+    admin = createAdminClient();
+  } catch (error) {
     return NextResponse.json(
-      { error: "Kullanıcı bulunamadı", details: fetchError?.message },
-      { status: 500 }
+      {
+        details: error instanceof Error ? error.message : undefined,
+        error: "Click sync servisi yapılandırılmamış",
+      },
+      { status: 500 },
     );
   }
 
-  const { error: updateError } = await supabase
-    .from("users")
-    .update({
-      balance: (player.balance ?? 0) + safeCoins,
-      total_coins: (player.total_coins ?? 0) + safeCoins,
-      weekly_coins: (player.weekly_coins ?? 0) + safeCoins,
-      total_clicks: (player.total_clicks ?? 0) + safeClicks,
-      xp: (player.xp ?? 0) + safeXp,
+  const { data, error } = await admin
+    .rpc("sync_click_window", {
+      p_clicks: safeClicks,
+      p_coins: safeCoins,
+      p_user_id: user.id,
+      p_window_hours: CLICK_WINDOW_HOURS,
+      p_window_max: CLICK_WINDOW_MAX,
+      p_xp: safeXp,
     })
-    .eq("id", user.id);
+    .single();
 
-  if (updateError) {
+  if (error) {
+    if (isMissingClickWindowSchemaError(error)) {
+      return NextResponse.json(
+        {
+          details: error.message,
+          error: "Click window migration uygulanmamış",
+        },
+        { status: 500 },
+      );
+    }
+
     return NextResponse.json(
-      { error: "Sync başarısız", details: updateError.message },
+      { error: "Sync başarısız", details: error.message },
       { status: 500 }
     );
   }
 
   return NextResponse.json({
+    clickWindow: toClickWindow(data),
     ok: true,
-    synced: { coins: safeCoins, xp: safeXp, clicks: safeClicks },
+    player: {
+      balance: data.balance,
+      total_coins: data.total_coins,
+      total_clicks: data.total_clicks,
+      weekly_coins: data.weekly_coins,
+      xp: data.xp,
+    },
+    rejectedClicks: data.rejected_clicks ?? 0,
+    synced: {
+      clicks: data.accepted_clicks ?? 0,
+      coins: data.synced_coins ?? 0,
+      xp: data.synced_xp ?? 0,
+    },
   });
 }
