@@ -1,4 +1,3 @@
-import PixelDesk from "@/components/dashboard/PixelDesk";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 
 const AUTH_ERROR_MESSAGES = {
@@ -13,10 +12,10 @@ const AUTH_ERROR_MESSAGES = {
 };
 
 const FEATURES = [
-  { icon: "🪙", label: "LogTime → LogCoin dönüşümü" },
-  { icon: "🔥", label: "Günlük streak bonusları" },
+  { icon: "🪙", label: "LogTime → LogCoin" },
+  { icon: "🔥", label: "Günlük streak" },
   { icon: "🏆", label: "Liderlik tablosu" },
-  { icon: "🛒", label: "Market & masa yükseltmeleri" },
+  { icon: "🛒", label: "Market & masa" },
 ];
 
 export default async function LoginPage({ searchParams }) {
@@ -29,95 +28,117 @@ export default async function LoginPage({ searchParams }) {
     : null;
 
   return (
-    <main className="relative min-h-screen text-g42-ink bg-[radial-gradient(var(--g42-grid)_1px,transparent_1px),linear-gradient(180deg,var(--g42-bg),var(--g42-bg-2))] [background-size:12px_12px,auto] flex items-center justify-center p-4 sm:p-6">
-      {/* Floating theme toggle */}
-      <div className="absolute top-4 right-4 z-10">
-        <ThemeToggle />
-      </div>
+    <>
+      <style>{`
+        @keyframes g42-slide-in {
+          from { opacity: 0; transform: translateY(20px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes g42-float {
+          0%, 100% { transform: translateY(0px); }
+          50%       { transform: translateY(-8px); }
+        }
+        .g42-card { animation: g42-slide-in 0.5s cubic-bezier(.22,1,.36,1) both; }
+        .g42-coin { animation: g42-float 3s ease-in-out infinite; display: inline-block; }
+        .g42-btn {
+          display: block; width: 100%; text-align: center;
+          background: var(--g42-accent);
+          color: #fff;
+          font-family: var(--font-silkscreen), monospace;
+          font-size: 11px;
+          letter-spacing: .14em;
+          text-transform: uppercase;
+          padding: 16px 0;
+          border: 3px solid var(--g42-line);
+          box-shadow: 4px 4px 0 var(--g42-line);
+          transition: box-shadow 60ms, transform 60ms;
+          text-decoration: none;
+        }
+        .g42-btn:hover  { box-shadow: none; transform: translate(4px, 4px); }
+        .g42-btn:active { box-shadow: none; transform: translate(4px, 4px); }
+      `}</style>
 
-      <div className="w-full max-w-[960px] grid grid-cols-1 min-[860px]:grid-cols-[1fr_320px] gap-5 items-center">
-        {/* ── Left: Hero ── */}
-        <div className="flex flex-col gap-4">
-          {/* Title card */}
-          <div className="nes-container !bg-g42-paper shadow-[0_5px_0_var(--g42-line)] relative overflow-hidden">
-            {/* Pixel sun */}
-            <div
-              aria-hidden="true"
-              className="absolute right-4 top-4 w-10 h-10 bg-g42-coin border-[3px] border-g42-line shadow-[3px_3px_0_var(--g42-coin-d)]"
-            />
-            <p className="m-0 font-[var(--font-silkscreen),monospace] text-[9px] text-g42-muted uppercase tracking-wide">
-              42 İstanbul · Daily Grind
-            </p>
-            <h1 className="m-0 mt-1 font-[var(--font-silkscreen),monospace] text-g42-ink text-[clamp(26px,5vw,50px)] leading-[0.92]">
-              42 Tycoon
-              <br />
-              <span className="text-g42-accent">LogTime</span> Grind
-            </h1>
-            <p className="m-0 mt-3 text-g42-ink-soft text-[16px] leading-snug max-w-[440px]">
-              Kampüste geçirdiğin süre{" "}
-              <strong className="text-g42-coin-d">LogCoin</strong>&apos;e
-              dönüşür. Serini koru, masanı geliştir, tabloya çık.
-            </p>
-          </div>
-
-          {/* Pixel desk scene */}
-          <PixelDesk
-            inventory={[
-              "ergonomic_chair",
-              "mech_keyboard",
-              "dual_monitor",
-              "pixel_cat",
-              "loba_cup",
-            ]}
-          />
+      <main
+        className="relative min-h-dvh flex items-center justify-center p-6
+          bg-[radial-gradient(var(--g42-grid)_1px,transparent_1px),linear-gradient(160deg,var(--g42-bg)_0%,var(--g42-bg-2)_100%)]
+          bg-size-[14px_14px,auto]"
+      >
+        {/* Tema değiştirici */}
+        <div className="absolute top-5 right-5 z-10">
+          <ThemeToggle />
         </div>
 
-        {/* ── Right: Login card ── */}
-        <section className="nes-container with-title !p-5 flex flex-col gap-4 shadow-[0_5px_0_var(--g42-line)] self-start min-[860px]:self-center">
-          <p className="title">Giriş Yap</p>
+        {/* Ana kart */}
+        <div className="g42-card w-full max-w-sm">
+          {/* Üst turuncu şerit */}
+          <div className="h-1 bg-g42-accent" />
 
-          <div>
-            <p className="m-0 font-[var(--font-silkscreen),monospace] text-g42-accent-2 text-[15px]">
-              Cluster Kapısı
+          {/* Kart gövdesi */}
+          <div className="border-[3px] border-t-0 border-g42-line bg-g42-paper shadow-[6px_6px_0_var(--g42-line)] px-8 pt-8 pb-9 flex flex-col gap-7">
+
+            {/* Başlık */}
+            <div className="flex flex-col items-center text-center gap-3">
+              <span className="g42-coin text-[48px] leading-none" aria-hidden="true">🪙</span>
+              <div>
+                <p className="m-0 font-[var(--font-silkscreen),monospace] text-[8px] text-g42-muted tracking-[.2em] uppercase">
+                  42 İstanbul · Daily Grind
+                </p>
+                <h1
+                  className="m-0 mt-3 font-[var(--font-silkscreen),monospace] text-g42-ink leading-[.9]"
+                  style={{ fontSize: "clamp(32px,9vw,48px)" }}
+                >
+                  42 <span className="text-g42-accent">Tycoon</span>
+                </h1>
+                <p className="m-0 mt-3 font-[var(--font-silkscreen),monospace] text-[7px] text-g42-muted tracking-[.18em]">
+                  LOGTIME GRIND
+                </p>
+              </div>
+            </div>
+
+            {/* Ayırıcı çizgi */}
+            <div className="h-0.5 bg-g42-line opacity-20" />
+
+            {/* Açıklama */}
+            <p className="m-0 text-center text-[14px] text-g42-ink-soft leading-relaxed">
+              Kampüste geçirdiğin süre{" "}
+              <strong className="text-g42-coin-d">LogCoin</strong>
+              &apos;e dönüşür. Serini koru, masanı yükselt, tabloya çık.
             </p>
-            <p className="m-0 mt-2 text-[14px] text-g42-ink-soft leading-snug">
-              42 hesabınla giriş yap ve oynamaya başla.
-            </p>
-          </div>
 
-          {/* Features */}
-          <ul className="m-0 p-0 list-none flex flex-col gap-2 border-t-[3px] border-g42-line pt-4">
-            {FEATURES.map(({ icon, label }) => (
-              <li
-                key={label}
-                className="flex items-center gap-2 text-[13px] text-g42-ink-soft"
-              >
-                <span className="shrink-0 text-[15px]" aria-hidden="true">
-                  {icon}
-                </span>
-                <span>{label}</span>
-              </li>
-            ))}
-          </ul>
+            {/* Özellik çipleri */}
+            <div className="grid grid-cols-2 gap-2">
+              {FEATURES.map(({ icon, label }) => (
+                <div
+                  key={label}
+                  className="flex items-center gap-2 bg-g42-bg border-2 border-g42-line px-3 py-2.5"
+                >
+                  <span className="text-[14px] shrink-0" aria-hidden="true">{icon}</span>
+                  <span className="font-[var(--font-silkscreen),monospace] text-[7.5px] text-g42-ink-soft leading-snug">
+                    {label}
+                  </span>
+                </div>
+              ))}
+            </div>
 
-          {/* Error */}
-          {errorMessage && (
-            <div className="nes-container !bg-g42-paper !p-3 shadow-[0_3px_0_var(--g42-line)]">
-              <p className="m-0 nes-text is-error text-[11px] leading-relaxed">
-                {errorMessage}
+            {/* Hata mesajı */}
+            {errorMessage && (
+              <div className="border-2 border-g42-danger px-4 py-3">
+                <p className="m-0 text-g42-danger text-[11px] leading-relaxed">⚠ {errorMessage}</p>
+              </div>
+            )}
+
+            {/* Giriş butonu */}
+            <div className="flex flex-col items-center gap-3">
+              <a href="/auth/sign-in" className="g42-btn">
+                ▶&nbsp;&nbsp;42 ile Giriş Yap
+              </a>
+              <p className="m-0 font-[var(--font-silkscreen),monospace] text-[7px] text-g42-muted tracking-wide">
+                42 intra hesabın gerekli
               </p>
             </div>
-          )}
-
-          {/* CTA */}
-          <a
-            href="/auth/sign-in"
-            className="nes-btn is-primary block w-full text-center mt-1"
-          >
-            42 ile Giriş Yap
-          </a>
-        </section>
-      </div>
-    </main>
+          </div>
+        </div>
+      </main>
+    </>
   );
 }
