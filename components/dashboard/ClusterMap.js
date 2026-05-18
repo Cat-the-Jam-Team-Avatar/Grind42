@@ -97,18 +97,21 @@ function normalizeInventory(inventory) {
 ────────────────────────────────────────────────────────────────────────── */
 
 const DECO_POSITIONS = [
-  // Cluster sağ kenarı — dekor için ideal çizgi
-  { id: "r2", x: 65, y: 30 },
-  { id: "r3", x: 65, y: 44 },
-  { id: "r4", x: 65, y: 58 },
-  { id: "r5", x: 65, y: 72 },
-  { id: "r6", x: 65, y: 85 },
-  // Bahçe / teras iç kısım
-  { id: "g2", x: 86, y: 25 },
-  { id: "g3", x: 76, y: 40 },
-  { id: "g4", x: 88, y: 55 },
-  { id: "g5", x: 72, y: 68 },
-  { id: "g6", x: 82, y: 80 },
+  // Cluster sağ kenarı
+  { id: "r1", x: 65, y: 34 },
+  { id: "r2", x: 65, y: 50 },
+  { id: "r3", x: 65, y: 65 },
+  { id: "r4", x: 65, y: 80 },
+  // Çardak içi
+  { id: "arbor_center", x: 84, y: 42 },
+  // Bahçe
+  { id: "g1", x: 73, y: 48 },
+  { id: "g2", x: 85, y: 55 },
+  { id: "g3", x: 75, y: 68 },
+  { id: "g4", x: 84, y: 72 },
+  { id: "g5", x: 80, y: 82 },
+  { id: "g6", x: 80, y: 60 },
+  { id: "g7", x: 76, y: 30 },
 ];
 
 function DecoGrid() {
@@ -157,7 +160,7 @@ function TableGrid() {
             {/* Masa */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/cluster/table/white_table.png"
+              src="/cluster/market/cosmetic/table/table-white.png"
               alt=""
               aria-hidden="true"
               draggable={false}
@@ -267,6 +270,7 @@ const ITEM_POSITIONS = {
   mech_keyboard:   { x: 3,  y: 20 },
   dual_monitor:    { x: 60, y: 20 },
   plant:           { x: 3,  y: 50 },
+  toilet_paper:    { x: 3,  y: 64 },
 };
 
 const SPRITE_MAP = {
@@ -274,9 +278,14 @@ const SPRITE_MAP = {
   ergonomic_chair: "chair", mech_keyboard: "keyboard", dual_monitor: "monitor",
 };
 
+const IMAGE_MAP = {
+  toilet_paper: "/cluster/market/cosmetic/toilet_paper.png",
+};
+
 function MapItem({ itemId, pos }) {
+  const imageSrc = IMAGE_MAP[itemId];
   const spriteName = SPRITE_MAP[itemId];
-  if (!spriteName) return null;
+  if (!imageSrc && !spriteName) return null;
   return (
     <div
       className="absolute pointer-events-none"
@@ -287,7 +296,18 @@ function MapItem({ itemId, pos }) {
         zIndex: Math.floor(pos.y) + 2,
       }}
     >
-      <PixelSprite name={spriteName} scale={2} />
+      {imageSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imageSrc}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+          style={{ width: 24, imageRendering: "pixelated" }}
+        />
+      ) : (
+        <PixelSprite name={spriteName} scale={2} />
+      )}
     </div>
   );
 }
@@ -313,6 +333,23 @@ export default function ClusterMap({ inventory = [] }) {
 
       <TableGrid />
       <DecoGrid />
+
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/cluster/arbor.png"
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        style={{
+          position: "absolute",
+          left: "84%",
+          top: "37%",
+          transform: "translate(-50%, -50%)",
+          width: "10%",
+          imageRendering: "pixelated",
+          zIndex: 36,
+        }}
+      />
 
       {ownedIds.map((id) => {
         const pos = ITEM_POSITIONS[id];

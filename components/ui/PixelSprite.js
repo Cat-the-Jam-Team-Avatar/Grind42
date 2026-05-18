@@ -232,5 +232,17 @@ export default function PixelSprite({ name, scale = 3, className = "", style }) 
 }
 
 export function CoinIcon({ size = 18 }) {
-  return <PixelSprite name="coin" scale={size / 8} />;
+  const px = Math.round(size * 1.5);
+  // eslint-disable-next-line @next/next/no-img-element
+  return (
+    <img
+      src="/coin/tiny-coin.png"
+      alt=""
+      aria-hidden="true"
+      draggable={false}
+      width={px}
+      height={px}
+      style={{ imageRendering: "pixelated", display: "inline-block" }}
+    />
+  );
 }
